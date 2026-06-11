@@ -14,13 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_usage: {
+        Row: {
+          count: number
+          used_date: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          used_date?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          used_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_premium: boolean
+          premium_until: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_premium?: boolean
+          premium_until?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_premium?: boolean
+          premium_until?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      try_consume_translation: { Args: { p_limit?: number }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
