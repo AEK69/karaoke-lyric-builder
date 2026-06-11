@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Lao Karaoke" },
+      { name: "description", content: "Karaoke Translator provides real-time song lyric translation for karaoke enthusiasts." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Lao Karaoke" },
+      { property: "og:description", content: "Karaoke Translator provides real-time song lyric translation for karaoke enthusiasts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Lao Karaoke" },
+      { name: "twitter:description", content: "Karaoke Translator provides real-time song lyric translation for karaoke enthusiasts." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/tcH0akNyKgYBuqSDqxX9pbWL03c2/social-images/social-1781160505285-IMG_7819.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/tcH0akNyKgYBuqSDqxX9pbWL03c2/social-images/social-1781160505285-IMG_7819.webp" },
     ],
     links: [
       {
