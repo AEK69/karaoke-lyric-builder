@@ -1,0 +1,89 @@
+// Lao ↔ Karaoke translator. Logic mirrors original site (chanthachonepimmasone.github.io/Laokaraoke).
+import { fullMap } from "./dictionary";
+
+const sortedKeys = Object.keys(fullMap).sort((a, b) => b.length - a.length);
+
+const seg =
+  typeof Intl !== "undefined" && (Intl as unknown as { Segmenter?: typeof Intl.Segmenter }).Segmenter
+    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+    : null;
+
+function getGraphemes(str: string): string[] {
+  if (seg) return [...seg.segment(str)].map((s) => s.segment);
+  const COMB = /[\u0EB0-\u0EB9\u0EBB\u0EBC\u0EC8-\u0ECB\u0ECD]/;
+  const PRE = /[\u0EC0-\u0EC4]/;
+  const out: string[] = [];
+  let i = 0;
+  while (i < str.length) {
+    let g = str[i];
+    if (PRE.test(str[i]) && i + 1 < str.length) {
+      g += str[i + 1];
+      i += 2;
+    } else {
+      i++;
+    }
+    while (i < str.length && COMB.test(str[i])) g += str[i++];
+    out.push(g);
+  }
+  return out;
+}
+
+export function translateKaraokeToLao(text: string): string {
+  const lower = text.toLowerCase();
+  const len = lower.length;
+  let result = "";
+  let i = 0;
+  while (i < len) {
+    if (/\s/.test(lower[i])) {
+      i++;
+      continue;
+    }
+    let matched = false;
+    for (const key of sortedKeys) {
+      if (lower.substr(i, key.length) === key) {
+        result += fullMap[key];
+        i += key.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) result += lower[i++];
+  }
+  return result;
+}
+
+export function translateLaoToKaraoke(text: string): string {
+  const len = text.length;
+  let result = "";
+  let i = 0;
+  while (i < len) {
+    if (/\s/.test(text[i])) {
+      result += text[i++];
+      continue;
+    }
+    let matched = false;
+    for (const key of sortedKeys) {
+      if (text.substr(i, key.length) === key) {
+        if (result && !/\s/.test(result[result.length - 1])) result += " ";
+        result += fullMap[key];
+        i += key.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      const cluster = getGraphemes(text.slice(i, Math.min(i + 8, len)))[0] || text[i];
+      if (result && !/\s/.test(result[result.length - 1])) result += " ";
+      result += cluster;
+      i += cluster.length;
+    }
+  }
+  return result.trim();
+}
+
+export type Direction = "lao-to-karaoke" | "karaoke-to-lao";
+
+export function translate(text: string, dir: Direction): string {
+  if (!text.trim()) return "";
+  return dir === "lao-to-karaoke" ? translateLaoToKaraoke(text) : translateKaraokeToLao(text);
+}
