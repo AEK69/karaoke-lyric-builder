@@ -37,6 +37,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           email: string | null
+          extra_credits: number
           full_name: string | null
           id: string
           is_premium: boolean
@@ -46,6 +47,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          extra_credits?: number
           full_name?: string | null
           id: string
           is_premium?: boolean
@@ -55,10 +57,71 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          extra_credits?: number
           full_name?: string | null
           id?: string
           is_premium?: boolean
           premium_until?: string | null
+        }
+        Relationships: []
+      }
+      topup_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          credits: number
+          expires_at: string | null
+          id: string
+          note: string | null
+          premium_days: number
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          credits?: number
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          premium_days?: number
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          credits?: number
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          premium_days?: number
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -67,10 +130,49 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_add_credits: {
+        Args: { p_amount: number; p_user: string }
+        Returns: Json
+      }
+      admin_create_topup_code: {
+        Args: {
+          p_credits: number
+          p_expires_at?: string
+          p_note?: string
+          p_premium_days: number
+        }
+        Returns: Json
+      }
+      admin_grant_premium: {
+        Args: { p_days: number; p_user: string }
+        Returns: Json
+      }
+      admin_revoke_premium: { Args: { p_user: string }; Returns: Json }
+      admin_search_users: {
+        Args: { p_query?: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          extra_credits: number
+          full_name: string
+          id: string
+          is_premium: boolean
+          premium_until: string
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      redeem_topup_code: { Args: { p_code: string }; Returns: Json }
       try_consume_translation: { Args: { p_limit?: number }; Returns: Json }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -197,6 +299,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
