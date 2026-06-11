@@ -231,7 +231,7 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
 
   async function create() {
     setBusy(true);
-    const { data, error } = await supabase.rpc("admin_create_topup_code", { p_credits: credits, p_premium_days: days, p_note: note || null, p_expires_at: null });
+    const { data, error } = await supabase.rpc("admin_create_topup_code", { p_credits: credits, p_premium_days: days, p_note: note || undefined, p_expires_at: undefined });
     setBusy(false);
     if (error) return toast.error(error.message);
     const r = data as { ok: boolean; code: string };
