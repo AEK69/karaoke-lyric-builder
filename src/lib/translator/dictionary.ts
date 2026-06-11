@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Auto-extracted from original Lao Karaoke site (chanthachonepimmasone.github.io/Laokaraoke)
 // eslint-disable
 export const fullMap: Record<string, string> = {
