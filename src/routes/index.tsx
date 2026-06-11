@@ -192,7 +192,6 @@ function Index() {
                 </button>
               )}
               {profile?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img src={profile.avatar_url} alt="" className="w-9 h-9 rounded-full ring-2 ring-primary/30" />
               ) : (
                 <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary">
