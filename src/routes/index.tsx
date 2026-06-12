@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { translate, type Direction } from "@/lib/translator";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -82,9 +81,12 @@ function Index() {
 
   async function handleLogin() {
     setSigningIn(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) {
-      toast.error("ເຂົ້າສູ່ລະບົບລົ້ມເຫຼວ", { description: String(result.error.message ?? result.error) });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) {
+      toast.error("ເຂົ້າສູ່ລະບົບລົ້ມເຫຼວ", { description: error.message });
       setSigningIn(false);
     }
   }
@@ -277,4 +279,3 @@ function LoginCard({ onLogin, loading }: { onLogin: () => void; loading: boolean
     </div>
   );
 }
-
