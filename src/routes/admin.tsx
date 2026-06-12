@@ -137,7 +137,7 @@ function AdminPage() {
 
   async function approvePayment(id: string) {
     const note = prompt("ໝາຍເຫດ (ບໍ່ຈຳເປັນ)") ?? null;
-    const { data, error } = await supabase.rpc("admin_approve_payment", { p_id: id, p_note: note });
+    const { data, error } = await supabase.rpc("admin_approve_payment", { p_id: id, p_note: note ?? undefined });
     if (error) return toast.error(error.message);
     const r = data as { ok: boolean; error?: string };
     if (!r.ok) return toast.error(r.error ?? "ຜິດພາດ");
@@ -146,7 +146,7 @@ function AdminPage() {
   }
   async function rejectPayment(id: string) {
     const note = prompt("ເຫດຜົນປະຕິເສດ:") ?? null;
-    const { error } = await supabase.rpc("admin_reject_payment", { p_id: id, p_note: note });
+    const { error } = await supabase.rpc("admin_reject_payment", { p_id: id, p_note: note ?? undefined });
     if (error) return toast.error(error.message);
     toast.success("ປະຕິເສດແລ້ວ");
     void loadPayments(paymentFilter);
