@@ -30,6 +30,7 @@ interface Profile {
 }
 
 function Index() {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -39,8 +40,6 @@ function Index() {
   const [output, setOutput] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showPremium, setShowPremium] = useState(false);
-  const [showRedeem, setShowRedeem] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
