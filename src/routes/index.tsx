@@ -109,7 +109,7 @@ function Index() {
       if (error) throw error;
       const res = data as { allowed: boolean; is_premium: boolean; used: number; remaining: number; credits: number };
       if (!res.allowed) {
-        setShowPremium(true);
+        navigate({ to: "/payment" });
         toast.error(`ໃຊ້ຄົບໂຄຕ້າແລ້ວ — ສະໝັກ Premium ຫຼື ໃຊ້ໂຄດເຕີມ`);
         setBusy(false); return;
       }
@@ -152,11 +152,11 @@ function Index() {
                   <Crown className="w-3.5 h-3.5" /> PREMIUM
                 </span>
               ) : (
-                <button onClick={() => setShowPremium(true)} className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-xs font-bold shadow-soft hover:scale-105 transition">
+                <button onClick={() => navigate({ to: "/payment" })} className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-xs font-bold shadow-soft hover:scale-105 transition">
                   <Crown className="w-3.5 h-3.5" /> Upgrade
                 </button>
               )}
-              <button onClick={() => setShowRedeem(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 transition" title="ໃຊ້ໂຄດເຕີມ">
+              <button onClick={() => navigate({ to: "/redeem" })} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 transition" title="ໃຊ້ໂຄດເຕີມ">
                 <Gift className="w-3.5 h-3.5" /> ໂຄດ
               </button>
               {profile?.avatar_url ? (
@@ -195,7 +195,7 @@ function Index() {
                   )}
                 </div>
                 {!isPremium && (
-                  <button className="text-xs font-semibold text-primary hover:underline" onClick={() => setShowPremium(true)}>
+                  <button className="text-xs font-semibold text-primary hover:underline" onClick={() => navigate({ to: "/payment" })}>
                     ສະໝັກ Premium →
                   </button>
                 )}
