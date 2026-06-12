@@ -115,7 +115,10 @@ function Index() {
       }
       setUsed(res.used);
       if (profile) setProfile({ ...profile, extra_credits: res.credits });
-      setOutput(translate(text, direction));
+      const translated = translate(text, direction);
+      setOutput(translated);
+      // Log to history (best-effort, non-blocking)
+      void supabase.rpc("log_translation", { p_direction: direction, p_input: text, p_output: translated });
     } catch (e) {
       toast.error("ເກີດຂໍ້ຜິດພາດ", { description: e instanceof Error ? e.message : String(e) });
     } finally { setBusy(false); }
@@ -156,9 +159,12 @@ function Index() {
                   <Crown className="w-3.5 h-3.5" /> Upgrade
                 </button>
               )}
-              <button onClick={() => navigate({ to: "/redeem" })} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 transition" title="ໃຊ້ໂຄດເຕີມ">
+              <Link to="/redeem" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 transition" title="ໃຊ້ໂຄດເຕີມ">
                 <Gift className="w-3.5 h-3.5" /> ໂຄດ
-              </button>
+              </Link>
+              <Link to="/history" className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-xs font-bold hover:bg-muted/70 transition" title="ປະຫວັດ">
+                <History className="w-3.5 h-3.5" /> ປະຫວັດ
+              </Link>
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="" className="w-9 h-9 rounded-full ring-2 ring-primary/30" />
               ) : (
