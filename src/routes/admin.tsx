@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket } from "lucide-react";
+import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,15 +36,44 @@ interface TopupCode {
   created_at: string;
 }
 
+interface PaymentRow {
+  id: string;
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  amount: number;
+  plan_label: string;
+  credits: number;
+  premium_days: number;
+  slip_url: string | null;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
+type UserFilter = "all" | "premium" | "free";
+type CodeFilter = "all" | "unused" | "used" | "expired";
+type PaymentFilter = "pending" | "approved" | "rejected" | "all";
+
 function AdminPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [tab, setTab] = useState<"users" | "codes" | "payments">("users");
+
+  // Users
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState("");
+  const [userFilter, setUserFilter] = useState<UserFilter>("all");
   const [loading, setLoading] = useState(false);
+
+  // Codes
   const [codes, setCodes] = useState<TopupCode[]>([]);
+  const [codeFilter, setCodeFilter] = useState<CodeFilter>("all");
   const [showCreate, setShowCreate] = useState(false);
-  const [tab, setTab] = useState<"users" | "codes">("users");
+
+  // Payments
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("pending");
 
   useEffect(() => {
     (async () => {
@@ -54,7 +83,8 @@ function AdminPage() {
       if (!r) { setAuthorized(false); return; }
       setAuthorized(true);
       void search("");
-      void loadCodes();
+      void loadCodes("all");
+      void loadPayments("pending");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -67,10 +97,16 @@ function AdminPage() {
     setUsers((data ?? []) as AdminUser[]);
   }
 
-  async function loadCodes() {
-    const { data, error } = await supabase.from("topup_codes").select("*").order("created_at", { ascending: false }).limit(100);
+  async function loadCodes(f: CodeFilter) {
+    const { data, error } = await supabase.rpc("admin_list_topup_codes", { p_filter: f });
     if (error) { toast.error(error.message); return; }
     setCodes((data ?? []) as TopupCode[]);
+  }
+
+  async function loadPayments(f: PaymentFilter) {
+    const { data, error } = await supabase.rpc("admin_list_payments", { p_status: f });
+    if (error) { toast.error(error.message); return; }
+    setPayments((data ?? []) as PaymentRow[]);
   }
 
   async function grantPremium(userId: string, days: number) {
@@ -79,35 +115,59 @@ function AdminPage() {
     toast.success(`+${days} ມື້ Premium`);
     void search(query);
   }
-
   async function revokePremium(userId: string) {
     const { error } = await supabase.rpc("admin_revoke_premium", { p_user: userId });
     if (error) return toast.error(error.message);
     toast.success("ຍົກເລີກ Premium");
     void search(query);
   }
-
   async function addCredits(userId: string, amount: number) {
     const { error } = await supabase.rpc("admin_add_credits", { p_user: userId, p_amount: amount });
     if (error) return toast.error(error.message);
     toast.success(`${amount >= 0 ? "+" : ""}${amount} ເຄຣດິດ`);
     void search(query);
   }
+  async function resetCredits(userId: string) {
+    if (!confirm("ຣີເຊັດເຄຣດິດ ແລະ ລ້າງການໃຊ້ງານວັນນີ້?")) return;
+    const { error } = await supabase.rpc("admin_reset_credits", { p_user: userId });
+    if (error) return toast.error(error.message);
+    toast.success("ຣີເຊັດແລ້ວ");
+    void search(query);
+  }
 
-  if (authorized === null) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  async function approvePayment(id: string) {
+    const note = prompt("ໝາຍເຫດ (ບໍ່ຈຳເປັນ)") ?? null;
+    const { data, error } = await supabase.rpc("admin_approve_payment", { p_id: id, p_note: note ?? undefined });
+    if (error) return toast.error(error.message);
+    const r = data as { ok: boolean; error?: string };
+    if (!r.ok) return toast.error(r.error ?? "ຜິດພາດ");
+    toast.success("ອະນຸມັດ ແລະ ເຕີມໃຫ້ຜູ້ໃຊ້ແລ້ວ");
+    void loadPayments(paymentFilter);
   }
-  if (!authorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="glass rounded-3xl p-8 text-center max-w-sm">
-          <h2 className="text-xl font-extrabold mb-2">ບໍ່ມີສິດເຂົ້າເຖິງ</h2>
-          <p className="text-sm text-muted-foreground mb-4">ໜ້ານີ້ສຳລັບແອັດມິນເທົ່ານັ້ນ</p>
-          <Link to="/"><Button>ກັບໜ້າຫຼັກ</Button></Link>
-        </div>
+  async function rejectPayment(id: string) {
+    const note = prompt("ເຫດຜົນປະຕິເສດ:") ?? null;
+    const { error } = await supabase.rpc("admin_reject_payment", { p_id: id, p_note: note ?? undefined });
+    if (error) return toast.error(error.message);
+    toast.success("ປະຕິເສດແລ້ວ");
+    void loadPayments(paymentFilter);
+  }
+
+  const filteredUsers = users.filter((u) => {
+    const active = u.is_premium && (!u.premium_until || new Date(u.premium_until) > new Date());
+    if (userFilter === "premium") return active;
+    if (userFilter === "free") return !active;
+    return true;
+  });
+
+  if (authorized === null) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  if (!authorized) return (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="glass rounded-3xl p-8 text-center max-w-sm">
+        <h2 className="text-xl font-extrabold mb-2">ບໍ່ມີສິດເຂົ້າເຖິງ</h2>
+        <Link to="/"><Button>ກັບໜ້າຫຼັກ</Button></Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="min-h-screen">
@@ -121,50 +181,114 @@ function AdminPage() {
       </header>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
-        <div className="inline-flex bg-muted rounded-full p-1">
-          <button onClick={() => setTab("users")} className={`px-4 py-1.5 rounded-full text-sm font-bold ${tab === "users" ? "bg-background shadow-soft" : "text-muted-foreground"}`}>ຜູ້ໃຊ້</button>
-          <button onClick={() => setTab("codes")} className={`px-4 py-1.5 rounded-full text-sm font-bold ${tab === "codes" ? "bg-background shadow-soft" : "text-muted-foreground"}`}>ໂຄດເຕີມ</button>
+        <div className="inline-flex bg-muted rounded-full p-1 flex-wrap">
+          <TabBtn active={tab === "users"} onClick={() => setTab("users")}>ຜູ້ໃຊ້</TabBtn>
+          <TabBtn active={tab === "payments"} onClick={() => { setTab("payments"); void loadPayments(paymentFilter); }}>
+            <CreditCard className="w-3 h-3 inline mr-1" /> ການຈ່າຍ
+          </TabBtn>
+          <TabBtn active={tab === "codes"} onClick={() => { setTab("codes"); void loadCodes(codeFilter); }}>ໂຄດເຕີມ</TabBtn>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
-        {tab === "users" ? (
+        {tab === "users" && (
           <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
-            <div className="flex gap-2 mb-4">
-              <div className="flex-1 relative">
+            <div className="flex gap-2 mb-3 flex-wrap">
+              <div className="flex-1 relative min-w-[200px]">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") search(query); }} placeholder="ຄົ້ນຫາ ອີເມວ / ຊື່" className="pl-9" />
               </div>
               <Button onClick={() => search(query)} disabled={loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "ຄົ້ນຫາ"}</Button>
             </div>
-
+            <div className="flex gap-1 mb-3 text-xs">
+              <FilterPill active={userFilter === "all"} onClick={() => setUserFilter("all")}>ທັງໝົດ ({users.length})</FilterPill>
+              <FilterPill active={userFilter === "premium"} onClick={() => setUserFilter("premium")}>Premium</FilterPill>
+              <FilterPill active={userFilter === "free"} onClick={() => setUserFilter("free")}>Free</FilterPill>
+            </div>
             <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-              {users.map((u) => (
-                <UserRow key={u.id} u={u} onGrant={grantPremium} onRevoke={revokePremium} onAdd={addCredits} />
+              {filteredUsers.map((u) => (
+                <UserRow key={u.id} u={u} onGrant={grantPremium} onRevoke={revokePremium} onAdd={addCredits} onReset={resetCredits} />
               ))}
-              {users.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີຜູ້ໃຊ້</div>}
+              {filteredUsers.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີຜູ້ໃຊ້</div>}
             </div>
           </div>
-        ) : (
+        )}
+
+        {tab === "payments" && (
           <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
-            <div className="flex justify-between mb-4">
-              <h2 className="font-extrabold">ໂຄດເຕີມທັງໝົດ</h2>
+            <div className="flex gap-1 mb-3 text-xs flex-wrap">
+              {(["pending", "approved", "rejected", "all"] as PaymentFilter[]).map((f) => (
+                <FilterPill key={f} active={paymentFilter === f} onClick={() => { setPaymentFilter(f); void loadPayments(f); }}>
+                  {f === "pending" ? "ລໍຖ້າ" : f === "approved" ? "ອະນຸມັດແລ້ວ" : f === "rejected" ? "ປະຕິເສດ" : "ທັງໝົດ"}
+                </FilterPill>
+              ))}
+            </div>
+            <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+              {payments.map((p) => (
+                <div key={p.id} className="border border-border rounded-2xl p-3 bg-white/40">
+                  <div className="flex justify-between items-start flex-wrap gap-2">
+                    <div className="flex-1 min-w-[200px]">
+                      <div className="font-bold text-sm">{p.full_name ?? p.email}</div>
+                      <div className="text-xs text-muted-foreground">{p.email} · {new Date(p.created_at).toLocaleString()}</div>
+                      <div className="text-sm mt-1">
+                        <span className="font-extrabold text-primary">{p.amount.toLocaleString()} ກີບ</span>
+                        <span className="mx-1">·</span>
+                        {p.plan_label}
+                        {p.credits > 0 && <span className="ml-2 text-accent">+{p.credits} ເຄຣດິດ</span>}
+                        {p.premium_days > 0 && <span className="ml-2 text-premium">+{p.premium_days} ມື້</span>}
+                      </div>
+                      <div className="text-xs mt-1">
+                        <span className={`px-2 py-0.5 rounded-full font-bold ${p.status === "pending" ? "bg-yellow-100 text-yellow-800" : p.status === "approved" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{p.status}</span>
+                        {p.admin_note && <span className="ml-2 text-muted-foreground">"{p.admin_note}"</span>}
+                      </div>
+                    </div>
+                    {p.status === "pending" && (
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={() => approvePayment(p.id)} className="bg-success text-success-foreground"><Check className="w-3 h-3 mr-1" /> ອະນຸມັດ</Button>
+                        <Button size="sm" variant="outline" onClick={() => rejectPayment(p.id)}>ປະຕິເສດ</Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {payments.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີລາຍການ</div>}
+            </div>
+          </div>
+        )}
+
+        {tab === "codes" && (
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+            <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
+              <div className="flex gap-1 text-xs flex-wrap">
+                {(["all", "unused", "used", "expired"] as CodeFilter[]).map((f) => (
+                  <FilterPill key={f} active={codeFilter === f} onClick={() => { setCodeFilter(f); void loadCodes(f); }}>
+                    {f === "all" ? "ທັງໝົດ" : f === "unused" ? "ຍັງບໍ່ໃຊ້" : f === "used" ? "ໃຊ້ແລ້ວ" : "ໝົດອາຍຸ"}
+                  </FilterPill>
+                ))}
+              </div>
               <Button onClick={() => setShowCreate(true)} size="sm" className="bg-gradient-button text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> ສ້າງໂຄດ</Button>
             </div>
             <div className="space-y-2 max-h-[70vh] overflow-y-auto">
               {codes.map((c) => <CodeRow key={c.id} c={c} />)}
-              {codes.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ຍັງບໍ່ມີໂຄດ</div>}
+              {codes.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີໂຄດ</div>}
             </div>
           </div>
         )}
       </main>
 
-      <CreateCodeDialog open={showCreate} onClose={() => setShowCreate(false)} onCreated={loadCodes} />
+      <CreateCodeDialog open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => loadCodes(codeFilter)} />
     </div>
   );
 }
 
-function UserRow({ u, onGrant, onRevoke, onAdd }: { u: AdminUser; onGrant: (id: string, d: number) => void; onRevoke: (id: string) => void; onAdd: (id: string, a: number) => void }) {
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button onClick={onClick} className={`px-4 py-1.5 rounded-full text-sm font-bold ${active ? "bg-background shadow-soft" : "text-muted-foreground"}`}>{children}</button>;
+}
+function FilterPill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button onClick={onClick} className={`px-3 py-1 rounded-full font-bold transition ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>{children}</button>;
+}
+
+function UserRow({ u, onGrant, onRevoke, onAdd, onReset }: { u: AdminUser; onGrant: (id: string, d: number) => void; onRevoke: (id: string) => void; onAdd: (id: string, a: number) => void; onReset: (id: string) => void }) {
   const [credit, setCredit] = useState(20);
   const active = u.is_premium && (!u.premium_until || new Date(u.premium_until) > new Date());
   return (
@@ -174,7 +298,7 @@ function UserRow({ u, onGrant, onRevoke, onAdd }: { u: AdminUser; onGrant: (id: 
         <div className="flex-1 min-w-[180px]">
           <div className="font-bold text-sm">{u.full_name ?? "(ບໍ່ມີຊື່)"}</div>
           <div className="text-xs text-muted-foreground">{u.email}</div>
-          <div className="flex gap-2 mt-1 text-xs">
+          <div className="flex gap-2 mt-1 text-xs flex-wrap">
             {active && <span className="px-2 py-0.5 rounded-full bg-gradient-premium text-premium-foreground font-bold">PREMIUM{u.premium_until ? ` · ${new Date(u.premium_until).toLocaleDateString()}` : ""}</span>}
             <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent font-bold">{u.extra_credits} ເຄຣດິດ</span>
           </div>
@@ -185,10 +309,13 @@ function UserRow({ u, onGrant, onRevoke, onAdd }: { u: AdminUser; onGrant: (id: 
           {active && <Button size="sm" variant="ghost" onClick={() => onRevoke(u.id)}>ຍົກເລີກ</Button>}
         </div>
       </div>
-      <div className="flex gap-2 mt-2 items-center">
+      <div className="flex gap-2 mt-2 items-center flex-wrap">
         <Input type="number" value={credit} onChange={(e) => setCredit(parseInt(e.target.value) || 0)} className="h-8 w-24" />
         <Button size="sm" onClick={() => onAdd(u.id, credit)}>+ ເຄຣດິດ</Button>
         <Button size="sm" variant="ghost" onClick={() => onAdd(u.id, -credit)}>− ເຄຣດິດ</Button>
+        <Button size="sm" variant="ghost" onClick={() => onReset(u.id)} title="ຣີເຊັດເຄຣດິດ ແລະ ການໃຊ້ງານວັນນີ້">
+          <RotateCcw className="w-3 h-3 mr-1" /> ຣີເຊັດ
+        </Button>
       </div>
     </div>
   );
@@ -197,12 +324,13 @@ function UserRow({ u, onGrant, onRevoke, onAdd }: { u: AdminUser; onGrant: (id: 
 function CodeRow({ c }: { c: TopupCode }) {
   const [copied, setCopied] = useState(false);
   const used = !!c.used_by;
+  const expired = !used && c.expires_at && new Date(c.expires_at) < new Date();
   function copy() {
     navigator.clipboard.writeText(c.code);
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <div className={`border rounded-2xl p-3 flex items-center gap-3 ${used ? "opacity-50 border-border" : "border-primary/30 bg-white/40"}`}>
+    <div className={`border rounded-2xl p-3 flex items-center gap-3 ${used || expired ? "opacity-50 border-border" : "border-primary/30 bg-white/40"}`}>
       <Ticket className="w-5 h-5 text-primary shrink-0" />
       <div className="flex-1">
         <div className="font-mono font-bold tracking-wider">{c.code}</div>
@@ -211,9 +339,10 @@ function CodeRow({ c }: { c: TopupCode }) {
           {c.premium_days > 0 && `+ ${c.premium_days} ມື້ Premium `}
           {c.note && `· ${c.note}`}
           {used && ` · ໃຊ້ແລ້ວ ${new Date(c.used_at!).toLocaleDateString()}`}
+          {expired && ` · ໝົດອາຍຸ`}
         </div>
       </div>
-      {!used && (
+      {!used && !expired && (
         <Button size="sm" variant="outline" onClick={copy}>
           {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
         </Button>
@@ -226,17 +355,22 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
   const [credits, setCredits] = useState(20);
   const [days, setDays] = useState(0);
   const [note, setNote] = useState("");
+  const [count, setCount] = useState(1);
   const [busy, setBusy] = useState(false);
-  const [last, setLast] = useState<string | null>(null);
+  const [last, setLast] = useState<string[]>([]);
 
   async function create() {
-    setBusy(true);
-    const { data, error } = await supabase.rpc("admin_create_topup_code", { p_credits: credits, p_premium_days: days, p_note: note || undefined, p_expires_at: undefined });
+    setBusy(true); setLast([]);
+    const codes: string[] = [];
+    for (let i = 0; i < Math.max(1, Math.min(50, count)); i++) {
+      const { data, error } = await supabase.rpc("admin_create_topup_code", { p_credits: credits, p_premium_days: days, p_note: note || undefined, p_expires_at: undefined });
+      if (error) { toast.error(error.message); break; }
+      const r = data as { ok: boolean; code: string };
+      codes.push(r.code);
+    }
     setBusy(false);
-    if (error) return toast.error(error.message);
-    const r = data as { ok: boolean; code: string };
-    setLast(r.code);
-    toast.success(`ສ້າງໂຄດສຳເລັດ: ${r.code}`);
+    setLast(codes);
+    toast.success(`ສ້າງ ${codes.length} ໂຄດ`);
     onCreated();
   }
 
@@ -247,16 +381,22 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
           <DialogTitle>ສ້າງໂຄດເຕີມໃໝ່</DialogTitle>
           <DialogDescription>ສ້າງໂຄດໃຫ້ຜູ້ໃຊ້ໄປໃຊ້ຮັບເຄຣດິດ / Premium</DialogDescription>
         </DialogHeader>
-        <label className="text-xs font-bold">ເຄຣດິດ</label>
+        <label className="text-xs font-bold">ເຄຣດິດຕໍ່ໂຄດ</label>
         <Input type="number" value={credits} onChange={(e) => setCredits(parseInt(e.target.value) || 0)} />
-        <label className="text-xs font-bold">ມື້ Premium</label>
+        <label className="text-xs font-bold">ມື້ Premium ຕໍ່ໂຄດ</label>
         <Input type="number" value={days} onChange={(e) => setDays(parseInt(e.target.value) || 0)} />
+        <label className="text-xs font-bold">ຈຳນວນໂຄດ (1-50)</label>
+        <Input type="number" value={count} onChange={(e) => setCount(parseInt(e.target.value) || 1)} />
         <label className="text-xs font-bold">ໝາຍເຫດ</label>
         <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="optional" />
         <Button onClick={create} disabled={busy} className="bg-gradient-button text-primary-foreground font-bold">
           {busy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />} ສ້າງ
         </Button>
-        {last && <div className="text-center font-mono text-lg p-2 bg-success/10 rounded-xl">{last}</div>}
+        {last.length > 0 && (
+          <div className="p-2 bg-success/10 rounded-xl max-h-40 overflow-y-auto space-y-1">
+            {last.map((c) => <div key={c} className="font-mono text-sm">{c}</div>)}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
