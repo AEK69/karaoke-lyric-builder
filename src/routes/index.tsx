@@ -248,8 +248,6 @@ function Index() {
         </div>
       </main>
 
-      <PremiumDialog open={showPremium} onClose={() => setShowPremium(false)} whatsapp={WHATSAPP} userLabel={profile?.full_name ?? session?.user.email ?? ""} userEmail={session?.user.email ?? ""} />
-      <RedeemDialog open={showRedeem} onClose={() => setShowRedeem(false)} onSuccess={refresh} />
     </div>
   );
 }
@@ -275,97 +273,3 @@ function LoginCard({ onLogin, loading }: { onLogin: () => void; loading: boolean
   );
 }
 
-interface Plan { label: string; price: number; days?: number; credits?: number; }
-const PLANS: Plan[] = [
-  { label: "20 ເຄຣດິດ", price: 5000, credits: 20 },
-  { label: "60 ເຄຣດິດ", price: 10000, credits: 60 },
-  { label: "Premium 1 ເດືອນ", price: 30000, days: 30 },
-  { label: "Premium 1 ປີ", price: 300000, days: 365 },
-];
-
-function PremiumDialog({ open, onClose, whatsapp, userLabel, userEmail }: { open: boolean; onClose: () => void; whatsapp: string; userLabel: string; userEmail: string }) {
-  const [plan, setPlan] = useState<Plan>(PLANS[2]);
-  const qr = useMemo(() => generateOnePayDynamicQR(plan.price), [plan]);
-
-  function sendSlip() {
-    const desc = plan.days ? `Premium ${plan.days} ມື້` : `${plan.credits} ເຄຣດິດ`;
-    const msg = encodeURIComponent(
-      `👑 Upgrade Lao Karaoke\n\n` +
-      `ແພັກເກດ: ${plan.label} (${desc})\n` +
-      `ລາຄາ: ${plan.price.toLocaleString()} ກີບ\n` +
-      `User: ${userLabel}\nEmail: ${userEmail}\n\n` +
-      `(ກະລຸນາແນບສະລິບການໂອນ)`
-    );
-    window.open(`https://wa.me/${whatsapp}?text=${msg}`, "_blank");
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl"><Crown className="w-5 h-5 text-premium" /> ສະໝັກ / ເຕີມເຄຣດິດ</DialogTitle>
-          <DialogDescription>ເລືອກແພັກເກດ → ສະແກນ QR → ສົ່ງສະລິບຜ່ານ WhatsApp</DialogDescription>
-        </DialogHeader>
-
-        <div className="grid grid-cols-2 gap-2">
-          {PLANS.map((p) => (
-            <button key={p.label} onClick={() => setPlan(p)} className={`text-left p-3 rounded-xl border-2 transition ${plan.label === p.label ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
-              <div className="text-xs font-bold">{p.label}</div>
-              <div className="text-sm font-extrabold text-primary">{p.price.toLocaleString()} ກີບ</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="bg-white rounded-2xl p-4 text-center border-2 border-primary/20">
-          <div className="text-xs font-bold text-muted-foreground mb-1 flex items-center justify-center gap-1"><QrCode className="w-3 h-3" /> OnePay QR — {plan.price.toLocaleString()} ກີບ</div>
-          <img src={qr.qrCodeUrl} alt="OnePay QR" className="mx-auto w-56 h-56" />
-          <div className="text-xs text-muted-foreground mt-1">AKAPHON XAYYABED</div>
-        </div>
-
-        <Button onClick={sendSlip} size="lg" className="w-full bg-[#25D366] hover:bg-[#1ebe5a] text-white font-bold">
-          <MessageCircle className="w-4 h-4 mr-2" /> ສົ່ງສະລິບ WhatsApp (020 5866 2540)
-        </Button>
-        <p className="text-xs text-muted-foreground text-center">ຫຼັງຈາກໂອນແລ້ວ ສົ່ງສະລິບໃຫ້ແອັດມິນ — ແອັດມິນຈະເຕີມໃຫ້ໃນ 24 ຊມ</p>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function RedeemDialog({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function redeem() {
-    if (!code.trim()) return;
-    setBusy(true);
-    try {
-      const { data, error } = await supabase.rpc("redeem_topup_code", { p_code: code.trim() });
-      if (error) throw error;
-      const r = data as { ok: boolean; error?: string; credits?: number; premium_days?: number };
-      if (!r.ok) {
-        const msg = r.error === "invalid_code" ? "ໂຄດບໍ່ຖືກຕ້ອງ" : r.error === "already_used" ? "ໂຄດຖືກໃຊ້ແລ້ວ" : r.error === "expired" ? "ໂຄດໝົດອາຍຸ" : "ຜິດພາດ";
-        toast.error(msg);
-      } else {
-        toast.success(`ສຳເລັດ! +${r.credits ?? 0} ເຄຣດິດ${r.premium_days ? `, +${r.premium_days} ມື້ Premium` : ""}`);
-        setCode(""); onSuccess(); onClose();
-      }
-    } catch (e) {
-      toast.error("ຜິດພາດ", { description: e instanceof Error ? e.message : String(e) });
-    } finally { setBusy(false); }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Gift className="w-5 h-5 text-accent" /> ໃຊ້ໂຄດເຕີມ</DialogTitle>
-          <DialogDescription>ປ້ອນໂຄດທີ່ໄດ້ຮັບຈາກແອັດມິນ</DialogDescription>
-        </DialogHeader>
-        <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="XXXXXXXXXXXX" className="text-center font-mono text-lg tracking-widest" />
-        <Button onClick={redeem} disabled={busy || !code.trim()} className="bg-gradient-button text-primary-foreground font-bold">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Gift className="w-4 h-4 mr-2" />} ໃຊ້ໂຄດ
-        </Button>
-      </DialogContent>
-    </Dialog>
-  );
-}
