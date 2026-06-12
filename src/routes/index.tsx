@@ -1,19 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, MessageCircle, Gift, Shield, QrCode } from "lucide-react";
+import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { translate, type Direction } from "@/lib/translator";
-import { generateOnePayDynamicQR } from "@/lib/onepay";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Session } from "@supabase/supabase-js";
 
 const FREE_DAILY_LIMIT = 15;
-const WHATSAPP = "85602058662540"; // 020 5866 2540
 
 export const Route = createFileRoute("/")({
   head: () => ({
