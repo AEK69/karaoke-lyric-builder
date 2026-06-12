@@ -32,6 +32,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          credits: number
+          id: string
+          plan_label: string
+          premium_days: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          slip_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          credits?: number
+          id?: string
+          plan_label: string
+          premium_days?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          slip_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          plan_label?: string
+          premium_days?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          slip_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -104,6 +149,33 @@ export type Database = {
         }
         Relationships: []
       }
+      translation_history: {
+        Row: {
+          created_at: string
+          direction: string
+          id: string
+          input_text: string
+          output_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          id?: string
+          input_text: string
+          output_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          id?: string
+          input_text?: string
+          output_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -134,6 +206,10 @@ export type Database = {
         Args: { p_amount: number; p_user: string }
         Returns: Json
       }
+      admin_approve_payment: {
+        Args: { p_id: string; p_note?: string }
+        Returns: Json
+      }
       admin_create_topup_code: {
         Args: {
           p_credits: number
@@ -147,6 +223,42 @@ export type Database = {
         Args: { p_days: number; p_user: string }
         Returns: Json
       }
+      admin_list_payments: {
+        Args: { p_status?: string }
+        Returns: {
+          admin_note: string
+          amount: number
+          created_at: string
+          credits: number
+          email: string
+          full_name: string
+          id: string
+          plan_label: string
+          premium_days: number
+          slip_url: string
+          status: string
+          user_id: string
+        }[]
+      }
+      admin_list_topup_codes: {
+        Args: { p_filter?: string }
+        Returns: {
+          code: string
+          created_at: string
+          credits: number
+          expires_at: string
+          id: string
+          note: string
+          premium_days: number
+          used_at: string
+          used_by: string
+        }[]
+      }
+      admin_reject_payment: {
+        Args: { p_id: string; p_note?: string }
+        Returns: Json
+      }
+      admin_reset_credits: { Args: { p_user: string }; Returns: Json }
       admin_revoke_premium: { Args: { p_user: string }; Returns: Json }
       admin_search_users: {
         Args: { p_query?: string }
@@ -167,6 +279,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_translation: {
+        Args: { p_direction: string; p_input: string; p_output: string }
+        Returns: string
       }
       redeem_topup_code: { Args: { p_code: string }; Returns: Json }
       try_consume_translation: { Args: { p_limit?: number }; Returns: Json }
