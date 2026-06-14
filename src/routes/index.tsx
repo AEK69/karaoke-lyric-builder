@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, History, Mail, Lock, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { translate, type Direction } from "@/lib/translator";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -41,6 +40,7 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [emailRateLimited, setEmailRateLimited] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -82,14 +82,16 @@ function Index() {
 
   async function handleLogin() {
     setSigningIn(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-      extraParams: { prompt: "select_account" },
+    // Bypass supabase.auth.signInWithOAuth — @lovable.dev/cloud-auth-js intercepts it
+    // and routes through ~oauth/initiate which only works on Lovable's servers.
+    // Navigate directly to Supabase's GoTrue authorize endpoint instead.
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const params = new URLSearchParams({
+      provider: "google",
+      redirect_to: window.location.origin,
+      prompt: "select_account",
     });
-    if (result.error) {
-      toast.error("ເຂົ້າສູ່ລະບົບລົ້ມເຫຼວ", { description: result.error.message });
-      setSigningIn(false);
-    }
+    window.location.assign(`${supabaseUrl}/auth/v1/authorize?${params}`);
   }
 
   async function handleEmailLogin(email: string, password: string) {
@@ -110,7 +112,11 @@ function Index() {
     });
     if (error) {
       console.error("[signup error]", error);
-      toast.error("ສະໝັກສະມາຊິກລົ້ມເຫຼວ", { description: `${error.message} (${error.status ?? error.name})` });
+      if (error.status === 429) {
+        setEmailRateLimited(true);
+      } else {
+        toast.error("ສະໝັກສະມາຊິກລົ້ມເຫຼວ", { description: error.message });
+      }
     } else if (data.session) {
       toast.success("ສ້າງບັນຊີສຳເລັດ! ຍິນດີຕ້ອນຮັບ 🎉");
     } else {
@@ -216,6 +222,7 @@ function Index() {
               onEmailLogin={handleEmailLogin}
               onEmailSignup={handleEmailSignup}
               loading={signingIn}
+              emailRateLimited={emailRateLimited}
             />
           ) : (
             <>
@@ -297,11 +304,13 @@ function LoginCard({
   onEmailLogin,
   onEmailSignup,
   loading,
+  emailRateLimited,
 }: {
   onGoogleLogin: () => void;
   onEmailLogin: (email: string, password: string) => void;
   onEmailSignup: (email: string, password: string, fullName: string) => void;
   loading: boolean;
+  emailRateLimited: boolean;
 }) {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -335,6 +344,21 @@ function LoginCard({
         <h2 className="text-2xl font-extrabold">ຍິນດີຕ້ອນຮັບ</h2>
         <p className="text-sm text-muted-foreground mt-1">ຟຣີ {FREE_DAILY_LIMIT} ຄັ້ງ/ວັນ</p>
       </div>
+
+      {emailRateLimited && (
+        <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs text-destructive">
+          <p className="font-bold mb-1">ຕ້ອງປິດ Email Confirmation ກ່ອນ</p>
+          <p className="mb-2">ໄປທີ່ Supabase → Auth → Providers → Email → ປິດ "Confirm email" → Save</p>
+          <a
+            href="https://supabase.com/dashboard/project/vositjjwzclxwtrstyzj/auth/providers"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-semibold"
+          >
+            ເປີດ Supabase Settings →
+          </a>
+        </div>
+      )}
 
       {/* Tab switcher */}
       <div className="flex rounded-2xl bg-muted p-1 mb-6">
@@ -403,7 +427,7 @@ function LoginCard({
       </div>
 
       {/* Google login */}
-      <Button onClick={onGoogleLogin} disabled={loading} size="lg" variant="outline" className="w-full bg-white text-foreground hover:bg-white/90 border border-border shadow-soft font-bold">
+      <Button onClick={onGoogleLogin} size="lg" variant="outline" className="w-full bg-white text-foreground hover:bg-white/90 border border-border shadow-soft font-bold">
         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <GoogleIcon />}
         ເຂົ້າດ້ວຍ Google
       </Button>
