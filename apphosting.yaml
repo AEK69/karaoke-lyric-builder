@@ -14,24 +14,31 @@ env:
   # --- Public Supabase config (anon/publishable key is safe to expose) ---
   # VITE_* are baked into the client bundle at BUILD time.
   - variable: VITE_SUPABASE_URL
-    value: https://vositjjwzclxwtrstyzj.supabase.co
+    value: https://mfezhtokwsvjvgfrvhnt.supabase.co
     availability:
       - BUILD
       - RUNTIME
   - variable: VITE_SUPABASE_PUBLISHABLE_KEY
-    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvc2l0amp3emNseHd0cnN0eXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTMzNjUsImV4cCI6MjA5Njg2OTM2NX0.Ge2ZOC0aUA6hdFJ419Zd-MObirD--ES6g6LoyHANs78
+    value: sb_publishable_kxvsTp5LU8QRtClEtYI_zg_rexGLvxC
     availability:
       - BUILD
       - RUNTIME
 
   # --- Server reads the non-VITE_ names at RUNTIME ---
   - variable: SUPABASE_URL
-    value: https://vositjjwzclxwtrstyzj.supabase.co
+    value: https://mfezhtokwsvjvgfrvhnt.supabase.co
     availability:
       - RUNTIME
   - variable: SUPABASE_PUBLISHABLE_KEY
-    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvc2l0amp3emNseHd0cnN0eXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTMzNjUsImV4cCI6MjA5Njg2OTM2NX0.Ge2ZOC0aUA6hdFJ419Zd-MObirD--ES6g6LoyHANs78
+    value: sb_publishable_kxvsTp5LU8QRtClEtYI_zg_rexGLvxC
     availability:
+      - RUNTIME
+
+  # --- Google OAuth ---
+  - variable: VITE_GOOGLE_CLIENT_ID
+    value: 509634567-ufpm61fd9184ipk0t0q1ak2le9u62v76.apps.googleusercontent.com
+    availability:
+      - BUILD
       - RUNTIME
 
   # --- Secret: service role key (bypasses RLS) — stored in Cloud Secret Manager ---
