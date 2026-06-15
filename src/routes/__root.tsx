@@ -76,7 +76,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" },
       { title: "Lao Karaoke" },
       { name: "description", content: "Karaoke Translator provides real-time song lyric translation for karaoke enthusiasts." },
       { name: "author", content: "Lovable" },

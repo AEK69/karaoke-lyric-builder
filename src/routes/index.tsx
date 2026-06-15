@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, History, Mail, Lock, User } from "lucide-react";
+import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { translate, type Direction } from "@/lib/translator";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,6 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
-  const [emailRateLimited, setEmailRateLimited] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -93,37 +92,6 @@ function Index() {
       prompt: "select_account",
     });
     window.location.assign(`${supabaseUrl}/auth/v1/authorize?${params}`);
-  }
-
-  async function handleEmailLogin(email: string, password: string) {
-    setSigningIn(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error("ເຂົ້າສູ່ລະບົບລົ້ມເຫຼວ", { description: error.message });
-    }
-    setSigningIn(false);
-  }
-
-  async function handleEmailSignup(email: string, password: string, fullName: string) {
-    setSigningIn(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (error) {
-      console.error("[signup error]", error);
-      if (error.status === 429) {
-        setEmailRateLimited(true);
-      } else {
-        toast.error("ສະໝັກສະມາຊິກລົ້ມເຫຼວ", { description: error.message });
-      }
-    } else if (data.session) {
-      toast.success("ສ້າງບັນຊີສຳເລັດ! ຍິນດີຕ້ອນຮັບ 🎉");
-    } else {
-      toast.success("ສ້າງບັນຊີສຳເລັດ! ກວດເບິ່ງອີເມລເພື່ອຢືນຢັນ");
-    }
-    setSigningIn(false);
   }
 
   async function handleLogout() {
@@ -202,13 +170,23 @@ function Index() {
               <Link to="/history" className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-xs font-bold hover:bg-muted/70 transition" title="ປະຫວັດ">
                 <History className="w-3.5 h-3.5" /> ປະຫວັດ
               </Link>
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-9 h-9 rounded-full ring-2 ring-primary/30" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary">
-                  {(profile?.full_name ?? session.user.email ?? "?")[0].toUpperCase()}
-                </div>
-              )}
+              {(() => {
+                const meta = session.user.user_metadata ?? {};
+                const avatarUrl = profile?.avatar_url ?? meta.avatar_url ?? meta.picture;
+                const name = profile?.full_name ?? meta.full_name ?? meta.name ?? session.user.email;
+                return avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={name ?? ""}
+                    referrerPolicy="no-referrer"
+                    className="w-9 h-9 rounded-full ring-2 ring-primary/30 object-cover"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary">
+                    {(name ?? "?")[0].toUpperCase()}
+                  </div>
+                );
+              })()}
               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout"><LogOut className="w-4 h-4" /></Button>
             </div>
           )}
@@ -218,13 +196,7 @@ function Index() {
       <main className="flex-1 px-4 sm:px-6 pb-10">
         <div className="max-w-4xl mx-auto">
           {!session ? (
-            <LoginCard
-              onGoogleLogin={handleLogin}
-              onEmailLogin={handleEmailLogin}
-              onEmailSignup={handleEmailSignup}
-              loading={signingIn}
-              emailRateLimited={emailRateLimited}
-            />
+            <LoginCard onGoogleLogin={handleLogin} loading={signingIn} />
           ) : (
             <>
               <div className="mb-4 flex items-center justify-between text-sm flex-wrap gap-2">
@@ -302,33 +274,11 @@ function Index() {
 
 function LoginCard({
   onGoogleLogin,
-  onEmailLogin,
-  onEmailSignup,
   loading,
-  emailRateLimited,
 }: {
   onGoogleLogin: () => void;
-  onEmailLogin: (email: string, password: string) => void;
-  onEmailSignup: (email: string, password: string, fullName: string) => void;
   loading: boolean;
-  emailRateLimited: boolean;
 }) {
-  const [tab, setTab] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email || !password) return;
-    if (tab === "login") {
-      onEmailLogin(email, password);
-    } else {
-      if (!fullName.trim()) { toast.error("ກະລຸນາໃສ່ຊື່ຂອງທ່ານ"); return; }
-      onEmailSignup(email, password, fullName.trim());
-    }
-  }
-
   const GoogleIcon = () => (
     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -346,88 +296,11 @@ function LoginCard({
         <p className="text-sm text-muted-foreground mt-1">ຟຣີ {FREE_DAILY_LIMIT} ຄັ້ງ/ວັນ</p>
       </div>
 
-      {emailRateLimited && (
-        <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs text-destructive">
-          <p className="font-bold mb-1">ຕ້ອງປິດ Email Confirmation ກ່ອນ</p>
-          <p className="mb-2">ໄປທີ່ Supabase → Auth → Providers → Email → ປິດ "Confirm email" → Save</p>
-          <a
-            href="https://supabase.com/dashboard/project/vositjjwzclxwtrstyzj/auth/providers"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline font-semibold"
-          >
-            ເປີດ Supabase Settings →
-          </a>
-        </div>
-      )}
+      <p className="text-center text-sm text-muted-foreground mb-6">
+        ເຂົ້າສູ່ລະບົບດ້ວຍ Google ເພື່ອເລີ່ມໃຊ້ງານ
+      </p>
 
-      {/* Tab switcher */}
-      <div className="flex rounded-2xl bg-muted p-1 mb-6">
-        <button
-          onClick={() => setTab("login")}
-          className={`flex-1 py-2 text-sm font-bold rounded-xl transition ${tab === "login" ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          ເຂົ້າສູ່ລະບົບ
-        </button>
-        <button
-          onClick={() => setTab("signup")}
-          className={`flex-1 py-2 text-sm font-bold rounded-xl transition ${tab === "signup" ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          ສະໝັກສະມາຊິກ
-        </button>
-      </div>
-
-      {/* Email/password form */}
-      <form onSubmit={handleSubmit} className="space-y-3 mb-4">
-        {tab === "signup" && (
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="ຊື່ຂອງທ່ານ"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/80 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition"
-            />
-          </div>
-        )}
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="email"
-            placeholder="ອີເມລ"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/80 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition"
-          />
-        </div>
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="password"
-            placeholder="ລະຫັດຜ່ານ"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/80 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm transition"
-          />
-        </div>
-        <Button type="submit" disabled={loading} size="lg" className="w-full bg-gradient-button text-primary-foreground font-bold shadow-glow">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          {tab === "login" ? "ເຂົ້າສູ່ລະບົບ" : "ສ້າງບັນຊີ"}
-        </Button>
-      </form>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3 my-4">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-muted-foreground font-medium">ຫຼື</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-
-      {/* Google login */}
+      {/* Google login (เหลือทางเดียว — กันสร้างบัญชีมั่วเพื่อใช้โควต้าฟรีซ้ำ) */}
       <Button onClick={onGoogleLogin} disabled={loading} size="lg" variant="outline" className="w-full bg-white text-foreground hover:bg-white/90 border border-border shadow-soft font-bold">
         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <GoogleIcon />}
         ເຂົ້າດ້ວຍ Google

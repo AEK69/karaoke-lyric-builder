@@ -119,6 +119,8 @@
     background-attachment: fixed;
     min-height: 100vh;
     font-family: 'Noto Sans Lao', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    /* กัน double-tap zoom บนมือถือ (เสริมจาก viewport meta) */
+    touch-action: manipulation;
   }
 }
 
