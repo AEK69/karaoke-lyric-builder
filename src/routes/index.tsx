@@ -82,9 +82,10 @@ function Index() {
 
   async function handleLogin() {
     setSigningIn(true);
-    // Bypass supabase.auth.signInWithOAuth — @lovable.dev/cloud-auth-js intercepts it
-    // and routes through ~oauth/initiate which only works on Lovable's servers.
-    // Navigate directly to Supabase's GoTrue authorize endpoint instead.
+    // Go straight to Supabase's GoTrue authorize endpoint. The Lovable OAuth
+    // helper routes through /~oauth/initiate which only works on Lovable's
+    // servers, so it breaks on localhost and Firebase. Google must be enabled
+    // as a provider in the Supabase project for this to work.
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
     const params = new URLSearchParams({
       provider: "google",
@@ -427,7 +428,7 @@ function LoginCard({
       </div>
 
       {/* Google login */}
-      <Button onClick={onGoogleLogin} size="lg" variant="outline" className="w-full bg-white text-foreground hover:bg-white/90 border border-border shadow-soft font-bold">
+      <Button onClick={onGoogleLogin} disabled={loading} size="lg" variant="outline" className="w-full bg-white text-foreground hover:bg-white/90 border border-border shadow-soft font-bold">
         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <GoogleIcon />}
         ເຂົ້າດ້ວຍ Google
       </Button>

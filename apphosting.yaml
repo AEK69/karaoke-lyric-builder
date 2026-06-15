@@ -14,23 +14,23 @@ env:
   # --- Public Supabase config (anon/publishable key is safe to expose) ---
   # VITE_* are baked into the client bundle at BUILD time.
   - variable: VITE_SUPABASE_URL
-    value: https://mfezhtokwsvjvgfrvhnt.supabase.co
+    value: https://vositjjwzclxwtrstyzj.supabase.co
     availability:
       - BUILD
       - RUNTIME
   - variable: VITE_SUPABASE_PUBLISHABLE_KEY
-    value: sb_publishable_kxvsTp5LU8QRtClEtYI_zg_rexGLvxC
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvc2l0amp3emNseHd0cnN0eXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTMzNjUsImV4cCI6MjA5Njg2OTM2NX0.Ge2ZOC0aUA6hdFJ419Zd-MObirD--ES6g6LoyHANs78
     availability:
       - BUILD
       - RUNTIME
 
   # --- Server reads the non-VITE_ names at RUNTIME ---
   - variable: SUPABASE_URL
-    value: https://mfezhtokwsvjvgfrvhnt.supabase.co
+    value: https://vositjjwzclxwtrstyzj.supabase.co
     availability:
       - RUNTIME
   - variable: SUPABASE_PUBLISHABLE_KEY
-    value: sb_publishable_kxvsTp5LU8QRtClEtYI_zg_rexGLvxC
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvc2l0amp3emNseHd0cnN0eXpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTMzNjUsImV4cCI6MjA5Njg2OTM2NX0.Ge2ZOC0aUA6hdFJ419Zd-MObirD--ES6g6LoyHANs78
     availability:
       - RUNTIME
 

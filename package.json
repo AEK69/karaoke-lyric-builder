@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-index.js",
     "build:dev": "vite build --mode development",
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "deploy": "firebase deploy --only apphosting"
+    "deploy": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
