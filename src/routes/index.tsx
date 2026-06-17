@@ -141,7 +141,7 @@ function Index() {
       <header className="px-4 sm:px-6 pt-6 pb-2">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-hero shadow-glow flex items-center justify-center text-white text-lg sm:text-xl font-black shrink-0">ລ</div>
+            <img src="/favicon1.ico" alt="Lao Karaoke" className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl shadow-glow object-cover shrink-0" />
             <div className="min-w-0">
               <h1 className="text-base sm:text-xl font-extrabold tracking-tight truncate">Lao Karaoke</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground truncate">ແປລາວ ↔ Karaoke</p>
@@ -318,7 +318,7 @@ function LoginCard({
   return (
     <div className="max-w-md mx-auto mt-10 sm:mt-16 glass rounded-3xl shadow-soft border border-white/50 p-8">
       <div className="text-center mb-6">
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-hero shadow-glow flex items-center justify-center text-white text-4xl font-black mb-4">ລ</div>
+        <img src="/favicon1.ico" alt="Lao Karaoke" className="w-20 h-20 mx-auto rounded-3xl shadow-glow object-cover mb-4" />
         <h2 className="text-2xl font-extrabold">ຍິນດີຕ້ອນຮັບ</h2>
         <p className="text-sm text-muted-foreground mt-1">ຟຣີ {FREE_DAILY_LIMIT} ຄັ້ງ/ວັນ</p>
       </div>
