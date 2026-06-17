@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowLeft, Gift, Loader2, Check, X, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Gift, Loader2, Check, X, Clock, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { canonicalOrigin } from "@/lib/canonical-domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
+import type { Session } from "@supabase/supabase-js";
 
 export const Route = createFileRoute("/redeem")({
   head: () => ({ meta: [{ title: "ໃຊ້ໂຄດເຕີມ — Lao Karaoke" }] }),
@@ -17,22 +19,51 @@ function RedeemPage() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setChecking(false); });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  function handleLogin() {
+    // Same direct GoTrue authorize flow as the home page, but return the user
+    // straight back to /redeem so they can use their code without bouncing home.
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const params = new URLSearchParams({
+      provider: "google",
+      redirect_to: `${canonicalOrigin()}/redeem`,
+      prompt: "select_account",
+    });
+    window.location.assign(`${supabaseUrl}/auth/v1/authorize?${params}`);
+  }
 
   async function redeem() {
     if (!code.trim()) return;
+    if (!session) { setResult({ ok: false, error: "not_authenticated" }); return; }
     setBusy(true); setResult(null);
-    const { data, error } = await supabase.rpc("redeem_topup_code", { p_code: code.trim() });
-    setBusy(false);
-    if (error) { setResult({ ok: false, error: error.message }); return; }
-    const r = data as { ok: boolean; error?: string; credits?: number; premium_days?: number };
-    if (r.ok) setResult({ ok: true, credits: r.credits ?? 0, premium_days: r.premium_days ?? 0 });
-    else setResult({ ok: false, error: r.error ?? "unknown" });
+    try {
+      const { data, error } = await supabase.rpc("redeem_topup_code", { p_code: code.trim() });
+      if (error) { setResult({ ok: false, error: error.message }); return; }
+      const r = data as { ok: boolean; error?: string; credits?: number; premium_days?: number };
+      if (r.ok) setResult({ ok: true, credits: r.credits ?? 0, premium_days: r.premium_days ?? 0 });
+      else setResult({ ok: false, error: r.error ?? "unknown" });
+    } catch (e) {
+      // Never leave the button silently stuck — surface whatever went wrong.
+      setResult({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
   }
 
   const errorMsg = (e: string) =>
     e === "invalid_code" ? "ໂຄດບໍ່ຖືກຕ້ອງ — ກວດອີກຄັ້ງ"
-    : e === "already_used" ? "ໂຄດນີ້ຖືກໃຊ້ໄປແລ້ວ"
+    : e === "already_used" || e === "already_redeemed" ? "ທ່ານໃຊ້ໂຄດນີ້ໄປແລ້ວ"
+    : e === "used_up" ? "ໂຄດນີ້ມີຄົນໃຊ້ຄົບຈຳນວນແລ້ວ"
     : e === "expired" ? "ໂຄດໝົດອາຍຸແລ້ວ"
+    : e === "not_authenticated" ? "ກະລຸນາເຂົ້າສູ່ລະບົບກ່ອນໃຊ້ໂຄດ"
     : `ຜິດພາດ: ${e}`;
 
   return (
@@ -46,6 +77,16 @@ function RedeemPage() {
         </div>
       </header>
       <main className="max-w-md mx-auto px-4 sm:px-6 pb-12">
+        {!checking && !session ? (
+          <div className="glass rounded-3xl shadow-soft border border-white/40 p-6 text-center">
+            <LogIn className="w-10 h-10 mx-auto text-primary mb-3" />
+            <p className="font-bold mb-1">ຕ້ອງເຂົ້າສູ່ລະບົບກ່ອນ</p>
+            <p className="text-sm text-muted-foreground mb-4">ເຂົ້າສູ່ລະບົບດ້ວຍ Google ເພື່ອໃຊ້ໂຄດເຕີມ</p>
+            <Button onClick={handleLogin} size="lg" className="bg-gradient-button text-primary-foreground font-bold">
+              <LogIn className="w-4 h-4 mr-2" /> ເຂົ້າສູ່ລະບົບດ້ວຍ Google
+            </Button>
+          </div>
+        ) : (
         <div className="glass rounded-3xl shadow-soft border border-white/40 p-6">
           <p className="text-sm text-muted-foreground mb-4 text-center">ປ້ອນໂຄດ 12 ຕົວທີ່ໄດ້ຮັບຈາກແອັດມິນ</p>
           <Input
@@ -75,6 +116,7 @@ function RedeemPage() {
             </div>
           )}
         </div>
+        )}
 
         <div className="mt-6 text-center text-xs text-muted-foreground">
           ຍັງບໍ່ມີໂຄດ? <Link to="/" className="text-primary font-bold hover:underline">ສະໝັກ Premium / ຊື້ເຄຣດິດ</Link>

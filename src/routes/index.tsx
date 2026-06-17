@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, History } from "lucide-react";
+import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, Hourglass } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { translate, type Direction } from "@/lib/translator";
+import { canonicalOrigin } from "@/lib/canonical-domain";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -88,7 +89,7 @@ function Index() {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
     const params = new URLSearchParams({
       provider: "google",
-      redirect_to: window.location.origin,
+      redirect_to: canonicalOrigin(),
       prompt: "select_account",
     });
     window.location.assign(`${supabaseUrl}/auth/v1/authorize?${params}`);
@@ -122,8 +123,6 @@ function Index() {
       if (profile) setProfile({ ...profile, extra_credits: res.credits });
       const translated = translate(text, direction);
       setOutput(translated);
-      // Log to history (best-effort, non-blocking)
-      void supabase.rpc("log_translation", { p_direction: direction, p_input: text, p_output: translated });
     } catch (e) {
       toast.error("ເກີດຂໍ້ຜິດພາດ", { description: e instanceof Error ? e.message : String(e) });
     } finally { setBusy(false); }
@@ -140,35 +139,38 @@ function Index() {
     <div className="min-h-screen flex flex-col">
       <Toaster richColors position="top-center" />
       <header className="px-4 sm:px-6 pt-6 pb-2">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-hero shadow-glow flex items-center justify-center text-white text-xl font-black">ລ</div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight">Lao Karaoke</h1>
-              <p className="text-xs text-muted-foreground">ແປລາວ ↔ Karaoke</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-hero shadow-glow flex items-center justify-center text-white text-lg sm:text-xl font-black shrink-0">ລ</div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-extrabold tracking-tight truncate">Lao Karaoke</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">ແປລາວ ↔ Karaoke</p>
             </div>
           </div>
           {session && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               {isAdmin && (
-                <Link to="/admin" className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-bold shadow-soft hover:opacity-90">
-                  <Shield className="w-3.5 h-3.5" /> Admin
+                <Link to="/admin" title="Admin" className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-foreground text-background text-[11px] sm:text-xs font-bold shadow-soft hover:opacity-90 whitespace-nowrap">
+                  <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="sm:hidden">ແອັດມິນ</span>
+                  <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
               {isPremium ? (
-                <span className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-xs font-bold shadow-soft">
-                  <Crown className="w-3.5 h-3.5" /> PREMIUM
+                <span title="Premium" className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft whitespace-nowrap">
+                  <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="sm:hidden">ພຣີມຽມ</span>
+                  <span className="hidden sm:inline">PREMIUM</span>
                 </span>
               ) : (
-                <button onClick={() => navigate({ to: "/payment" })} className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-xs font-bold shadow-soft hover:scale-105 transition">
-                  <Crown className="w-3.5 h-3.5" /> Upgrade
+                <button onClick={() => navigate({ to: "/payment" })} title="Upgrade Premium" className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft hover:scale-105 transition whitespace-nowrap">
+                  <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="sm:hidden">ສະໝັກ</span>
+                  <span className="hidden sm:inline">Upgrade</span>
                 </button>
               )}
-              <Link to="/redeem" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-accent/15 text-accent text-xs font-bold hover:bg-accent/25 transition" title="ໃຊ້ໂຄດເຕີມ">
-                <Gift className="w-3.5 h-3.5" /> ໂຄດ
-              </Link>
-              <Link to="/history" className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-xs font-bold hover:bg-muted/70 transition" title="ປະຫວັດ">
-                <History className="w-3.5 h-3.5" /> ປະຫວັດ
+              <Link to="/redeem" className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-accent/15 text-accent text-[11px] sm:text-xs font-bold hover:bg-accent/25 transition whitespace-nowrap" title="ໃຊ້ໂຄດເຕີມ">
+                <Gift className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> ໂຄດ
               </Link>
               {(() => {
                 const meta = session.user.user_metadata ?? {};
@@ -179,15 +181,15 @@ function Index() {
                     src={avatarUrl}
                     alt={name ?? ""}
                     referrerPolicy="no-referrer"
-                    className="w-9 h-9 rounded-full ring-2 ring-primary/30 object-cover"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-primary/30 object-cover shrink-0"
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary shrink-0">
                     {(name ?? "?")[0].toUpperCase()}
                   </div>
                 );
               })()}
-              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout"><LogOut className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"><LogOut className="w-4 h-4" /></Button>
             </div>
           )}
         </div>
@@ -204,7 +206,10 @@ function Index() {
                   <div className="flex items-center gap-1.5">
                     <Zap className="w-4 h-4 text-primary" />
                     {isPremium ? (
-                      <span className="text-gradient font-bold">ໃຊ້ງານບໍ່ຈຳກັດ</span>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="text-gradient font-bold">ໃຊ້ງານບໍ່ຈຳກັດ</span>
+                        {profile?.premium_until && <PremiumCountdown until={profile.premium_until} />}
+                      </span>
                     ) : (
                       <span>ເຫຼືອ <span className="font-bold text-primary">{remaining}</span> / {FREE_DAILY_LIMIT} ຄັ້ງ</span>
                     )}
@@ -215,11 +220,6 @@ function Index() {
                     </span>
                   )}
                 </div>
-                {!isPremium && (
-                  <button className="text-xs font-semibold text-primary hover:underline" onClick={() => navigate({ to: "/payment" })}>
-                    ສະໝັກ Premium →
-                  </button>
-                )}
               </div>
 
               <div className="glass rounded-3xl shadow-soft border border-white/40 p-4 sm:p-6">
@@ -269,6 +269,33 @@ function Index() {
       </main>
 
     </div>
+  );
+}
+
+function formatCountdown(iso: string, nowMs: number): string {
+  const ms = new Date(iso).getTime() - nowMs;
+  if (ms <= 0) return "ໝົດອາຍຸ";
+  const total = Math.floor(ms / 1000);
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d}ມື້ ${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+// The premium countdown belongs to the signed-in user only — driven by their
+// own profile.premium_until, not anyone else's.
+function PremiumCountdown({ until }: { until: string }) {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-premium/10 text-premium font-mono text-xs font-bold" title="Premium ເຫຼືອ">
+      <Hourglass className="w-3 h-3" /> {formatCountdown(until, nowMs)}
+    </span>
   );
 }
 

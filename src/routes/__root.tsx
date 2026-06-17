@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { redirectToCanonical } from "../lib/canonical-domain";
 
 function NotFoundComponent() {
   return (
@@ -119,6 +120,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Forward visitors on the Firebase default domains to the canonical domain.
+  useEffect(() => {
+    redirectToCanonical();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

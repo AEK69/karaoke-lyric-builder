@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter } from "lucide-react";
+import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +31,8 @@ interface TopupCode {
   premium_days: number;
   note: string | null;
   expires_at: string | null;
-  used_by: string | null;
-  used_at: string | null;
+  max_uses: number | null;
+  use_count: number;
   created_at: string;
 }
 
@@ -101,6 +101,14 @@ function AdminPage() {
     const { data, error } = await supabase.rpc("admin_list_topup_codes", { p_filter: f });
     if (error) { toast.error(error.message); return; }
     setCodes((data ?? []) as TopupCode[]);
+  }
+
+  async function deleteCode(id: string) {
+    if (!confirm("ລຶບໂຄດນີ້ຖາວອນ?")) return;
+    const { error } = await supabase.rpc("admin_delete_topup_code", { p_id: id });
+    if (error) { toast.error("ລຶບລົ້ມເຫຼວ", { description: error.message }); return; }
+    toast.success("ລຶບໂຄດແລ້ວ");
+    void loadCodes(codeFilter);
   }
 
   async function loadPayments(f: PaymentFilter) {
@@ -269,7 +277,7 @@ function AdminPage() {
               <Button onClick={() => setShowCreate(true)} size="sm" className="bg-gradient-button text-primary-foreground"><Plus className="w-4 h-4 mr-1" /> ສ້າງໂຄດ</Button>
             </div>
             <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-              {codes.map((c) => <CodeRow key={c.id} c={c} />)}
+              {codes.map((c) => <CodeRow key={c.id} c={c} onDelete={deleteCode} />)}
               {codes.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີໂຄດ</div>}
             </div>
           </div>
@@ -321,16 +329,17 @@ function UserRow({ u, onGrant, onRevoke, onAdd, onReset }: { u: AdminUser; onGra
   );
 }
 
-function CodeRow({ c }: { c: TopupCode }) {
+function CodeRow({ c, onDelete }: { c: TopupCode; onDelete: (id: string) => void }) {
   const [copied, setCopied] = useState(false);
-  const used = !!c.used_by;
-  const expired = !used && c.expires_at && new Date(c.expires_at) < new Date();
+  const usedUp = c.max_uses != null && c.use_count >= c.max_uses;
+  const expired = !usedUp && c.expires_at && new Date(c.expires_at) < new Date();
+  const usageLabel = c.max_uses == null ? `${c.use_count}/∞` : `${c.use_count}/${c.max_uses}`;
   function copy() {
     navigator.clipboard.writeText(c.code);
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <div className={`border rounded-2xl p-3 flex items-center gap-3 ${used || expired ? "opacity-50 border-border" : "border-primary/30 bg-white/40"}`}>
+    <div className={`border rounded-2xl p-3 flex items-center gap-3 ${usedUp || expired ? "opacity-50 border-border" : "border-primary/30 bg-white/40"}`}>
       <Ticket className="w-5 h-5 text-primary shrink-0" />
       <div className="flex-1">
         <div className="font-mono font-bold tracking-wider">{c.code}</div>
@@ -338,15 +347,19 @@ function CodeRow({ c }: { c: TopupCode }) {
           {c.credits > 0 && `${c.credits} ເຄຣດິດ `}
           {c.premium_days > 0 && `+ ${c.premium_days} ມື້ Premium `}
           {c.note && `· ${c.note}`}
-          {used && ` · ໃຊ້ແລ້ວ ${new Date(c.used_at!).toLocaleDateString()}`}
+          {` · ໃຊ້ ${usageLabel} ຄົນ`}
+          {usedUp && ` · ໃຊ້ຄົບແລ້ວ`}
           {expired && ` · ໝົດອາຍຸ`}
         </div>
       </div>
-      {!used && !expired && (
+      {!usedUp && !expired && (
         <Button size="sm" variant="outline" onClick={copy}>
           {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
         </Button>
       )}
+      <Button size="sm" variant="ghost" onClick={() => onDelete(c.id)} title="ລຶບໂຄດ" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+        <Trash2 className="w-3 h-3" />
+      </Button>
     </div>
   );
 }
@@ -356,6 +369,7 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
   const [days, setDays] = useState(0);
   const [note, setNote] = useState("");
   const [count, setCount] = useState(1);
+  const [maxUses, setMaxUses] = useState(1);
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string[]>([]);
 
@@ -363,7 +377,7 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
     setBusy(true); setLast([]);
     const codes: string[] = [];
     for (let i = 0; i < Math.max(1, Math.min(50, count)); i++) {
-      const { data, error } = await supabase.rpc("admin_create_topup_code", { p_credits: credits, p_premium_days: days, p_note: note || undefined, p_expires_at: undefined });
+      const { data, error } = await supabase.rpc("admin_create_topup_code", { p_credits: credits, p_premium_days: days, p_note: note || undefined, p_expires_at: undefined, p_max_uses: maxUses });
       if (error) { toast.error(error.message); break; }
       const r = data as { ok: boolean; code: string };
       codes.push(r.code);
@@ -387,6 +401,8 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
         <Input type="number" value={days} onChange={(e) => setDays(parseInt(e.target.value) || 0)} />
         <label className="text-xs font-bold">ຈຳນວນໂຄດ (1-50)</label>
         <Input type="number" value={count} onChange={(e) => setCount(parseInt(e.target.value) || 1)} />
+        <label className="text-xs font-bold">ໃຊ້ໄດ້ກີ່ຄົນຕໍ່ໂຄດ (0 = ບໍ່ຈຳກັດ)</label>
+        <Input type="number" min={0} value={maxUses} onChange={(e) => setMaxUses(Math.max(0, parseInt(e.target.value) || 0))} />
         <label className="text-xs font-bold">ໝາຍເຫດ</label>
         <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="optional" />
         <Button onClick={create} disabled={busy} className="bg-gradient-button text-primary-foreground font-bold">
