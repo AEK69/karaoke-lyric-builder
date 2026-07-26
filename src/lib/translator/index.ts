@@ -1,7 +1,28 @@
 // Lao ↔ Karaoke translator. Logic mirrors original site (chanthachonepimmasone.github.io/Laokaraoke).
 import { fullMap } from "./dictionary";
 
-const sortedKeys = Object.keys(fullMap).sort((a, b) => b.length - a.length);
+// Community words approved by an admin are merged on top of the built-in map.
+let activeMap: Record<string, string> = { ...fullMap };
+let sortedKeys = Object.keys(activeMap).sort((a, b) => b.length - a.length);
+
+/** Merge admin-approved community words into the active dictionary. */
+export function setCommunityWords(entries: Array<{ lao: string; karaoke: string }>): void {
+  activeMap = { ...fullMap };
+  for (const e of entries) {
+    const lao = e.lao?.trim();
+    const karaoke = e.karaoke?.trim().toLowerCase();
+    if (!lao || !karaoke || fullMap[lao]) continue;
+    activeMap[lao] = karaoke;
+    if (!activeMap[karaoke]) activeMap[karaoke] = lao;
+  }
+  sortedKeys = Object.keys(activeMap).sort((a, b) => b.length - a.length);
+}
+
+/** True when the word already exists in the built-in dictionary. */
+export function hasWord(lao: string): boolean {
+  return Boolean(fullMap[lao.trim()]);
+}
+
 
 const seg =
   typeof Intl !== "undefined" && (Intl as unknown as { Segmenter?: typeof Intl.Segmenter }).Segmenter
@@ -41,7 +62,7 @@ export function translateKaraokeToLao(text: string): string {
     let matched = false;
     for (const key of sortedKeys) {
       if (lower.substr(i, key.length) === key) {
-        result += fullMap[key];
+        result += activeMap[key];
         i += key.length;
         matched = true;
         break;
@@ -65,7 +86,7 @@ export function translateLaoToKaraoke(text: string): string {
     for (const key of sortedKeys) {
       if (text.substr(i, key.length) === key) {
         if (result && !/\s/.test(result[result.length - 1])) result += " ";
-        result += fullMap[key];
+        result += activeMap[key];
         i += key.length;
         matched = true;
         break;

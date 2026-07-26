@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RedeemRouteImport } from './routes/redeem'
 import { Route as PaymentRouteImport } from './routes/payment'
+import { Route as ApiDocsRouteImport } from './routes/api-docs'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicTranslateRouteImport } from './routes/api/public/translate'
 
 const RedeemRoute = RedeemRouteImport.update({
   id: '/redeem',
@@ -22,6 +24,11 @@ const RedeemRoute = RedeemRouteImport.update({
 const PaymentRoute = PaymentRouteImport.update({
   id: '/payment',
   path: '/payment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocsRoute = ApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -34,39 +41,71 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTranslateRoute = ApiPublicTranslateRouteImport.update({
+  id: '/api/public/translate',
+  path: '/api/public/translate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api-docs': typeof ApiDocsRoute
   '/payment': typeof PaymentRoute
   '/redeem': typeof RedeemRoute
+  '/api/public/translate': typeof ApiPublicTranslateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api-docs': typeof ApiDocsRoute
   '/payment': typeof PaymentRoute
   '/redeem': typeof RedeemRoute
+  '/api/public/translate': typeof ApiPublicTranslateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api-docs': typeof ApiDocsRoute
   '/payment': typeof PaymentRoute
   '/redeem': typeof RedeemRoute
+  '/api/public/translate': typeof ApiPublicTranslateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/payment' | '/redeem'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/api-docs'
+    | '/payment'
+    | '/redeem'
+    | '/api/public/translate'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/payment' | '/redeem'
-  id: '__root__' | '/' | '/admin' | '/payment' | '/redeem'
+  to:
+    | '/'
+    | '/admin'
+    | '/api-docs'
+    | '/payment'
+    | '/redeem'
+    | '/api/public/translate'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/api-docs'
+    | '/payment'
+    | '/redeem'
+    | '/api/public/translate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ApiDocsRoute: typeof ApiDocsRoute
   PaymentRoute: typeof PaymentRoute
   RedeemRoute: typeof RedeemRoute
+  ApiPublicTranslateRoute: typeof ApiPublicTranslateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,6 +124,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PaymentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api-docs': {
+      id: '/api-docs'
+      path: '/api-docs'
+      fullPath: '/api-docs'
+      preLoaderRoute: typeof ApiDocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -99,14 +145,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/translate': {
+      id: '/api/public/translate'
+      path: '/api/public/translate'
+      fullPath: '/api/public/translate'
+      preLoaderRoute: typeof ApiPublicTranslateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ApiDocsRoute: ApiDocsRoute,
   PaymentRoute: PaymentRoute,
   RedeemRoute: RedeemRoute,
+  ApiPublicTranslateRoute: ApiPublicTranslateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

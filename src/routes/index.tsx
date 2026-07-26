@@ -1,15 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, Hourglass } from "lucide-react";
+import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, Hourglass, PlusCircle, Code2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { translate, type Direction } from "@/lib/translator";
+import { translate, setCommunityWords, type Direction } from "@/lib/translator";
 import { canonicalOrigin } from "@/lib/canonical-domain";
+import { SuggestWordDialog } from "@/components/SuggestWordDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import type { Session } from "@supabase/supabase-js";
 
 const FREE_DAILY_LIMIT = 15;
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,12 +43,27 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Approved community words extend the built-in dictionary.
+  useEffect(() => {
+    supabase
+      .from("word_suggestions")
+      .select("lao_word, karaoke_word")
+      .eq("status", "approved")
+      .limit(5000)
+      .then(({ data }) => {
+        if (data) setCommunityWords(data.map((r) => ({ lao: r.lao_word, karaoke: r.karaoke_word })));
+      });
+  }, []);
+
+
 
   const refresh = async () => {
     if (!session) return;
@@ -220,7 +237,16 @@ function Index() {
                     </span>
                   )}
                 </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowSuggest(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition">
+                    <PlusCircle className="w-3.5 h-3.5" /> ເພີ່ມຄຳສັບ
+                  </button>
+                  <Link to="/api-docs" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs font-bold hover:bg-muted/70 transition">
+                    <Code2 className="w-3.5 h-3.5" /> API
+                  </Link>
+                </div>
               </div>
+
 
               <div className="glass rounded-3xl shadow-soft border border-white/40 p-4 sm:p-6">
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm font-bold">
@@ -268,7 +294,9 @@ function Index() {
         </div>
       </main>
 
+      <SuggestWordDialog open={showSuggest} onClose={() => setShowSuggest(false)} />
     </div>
+
   );
 }
 

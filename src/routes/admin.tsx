@@ -1,12 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2 } from "lucide-react";
+import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2, BarChart3, Languages, Users, Coins, X } from "lucide-react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Lao Karaoke" }] }),
@@ -51,14 +53,43 @@ interface PaymentRow {
   created_at: string;
 }
 
+interface Suggestion {
+  id: string;
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  lao_word: string;
+  karaoke_word: string;
+  note: string | null;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
+interface StatsSeries { day: string; translations: number; new_users: number; words: number }
+interface Stats {
+  total_users: number;
+  premium_users: number;
+  new_users_7d: number;
+  translations_total: number;
+  translations_today: number;
+  pending_payments: number;
+  pending_words: number;
+  approved_words: number;
+  revenue_total: number;
+  active_codes: number;
+  series: StatsSeries[];
+}
+
 type UserFilter = "all" | "premium" | "free";
 type CodeFilter = "all" | "unused" | "used" | "expired";
 type PaymentFilter = "pending" | "approved" | "rejected" | "all";
+type WordFilter = "pending" | "approved" | "rejected" | "all";
 
 function AdminPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"users" | "codes" | "payments">("users");
+  const [tab, setTab] = useState<"stats" | "users" | "codes" | "payments" | "words">("stats");
 
   // Users
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -75,6 +106,11 @@ function AdminPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("pending");
 
+  // Words + stats
+  const [words, setWords] = useState<Suggestion[]>([]);
+  const [wordFilter, setWordFilter] = useState<WordFilter>("pending");
+  const [stats, setStats] = useState<Stats | null>(null);
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -82,12 +118,38 @@ function AdminPage() {
       const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", s.session.user.id).eq("role", "admin").maybeSingle();
       if (!r) { setAuthorized(false); return; }
       setAuthorized(true);
+      void loadStats();
       void search("");
       void loadCodes("all");
       void loadPayments("pending");
+      void loadWords("pending");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadStats() {
+    const { data, error } = await supabase.rpc("admin_stats", { p_days: 14 });
+    if (error) { toast.error(error.message); return; }
+    setStats(data as unknown as Stats);
+  }
+
+  async function loadWords(f: WordFilter) {
+    const { data, error } = await supabase.rpc("admin_list_suggestions", { p_status: f });
+    if (error) { toast.error(error.message); return; }
+    setWords((data ?? []) as Suggestion[]);
+  }
+
+  async function reviewWord(id: string, approve: boolean) {
+    const note = approve ? null : (prompt("ເຫດຜົນປະຕິເສດ (ບໍ່ຈຳເປັນ)") ?? null);
+    const { data, error } = await supabase.rpc("admin_review_suggestion", { p_id: id, p_approve: approve, p_note: note ?? undefined });
+    if (error) return toast.error(error.message);
+    const r = data as { ok: boolean; error?: string };
+    if (!r.ok) return toast.error(r.error ?? "ຜິດພາດ");
+    toast.success(approve ? "ອະນຸມັດແລ້ວ — ຜູ້ສົ່ງໄດ້ Premium 1 ມື້" : "ປະຕິເສດແລ້ວ");
+    void loadWords(wordFilter);
+    void loadStats();
+  }
+
 
   async function search(q: string) {
     setLoading(true);
@@ -190,16 +252,56 @@ function AdminPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
         <div className="inline-flex bg-muted rounded-full p-1 flex-wrap">
+          <TabBtn active={tab === "stats"} onClick={() => { setTab("stats"); void loadStats(); }}>
+            <BarChart3 className="w-3 h-3 inline mr-1" /> ສະຖິຕິ
+          </TabBtn>
           <TabBtn active={tab === "users"} onClick={() => setTab("users")}>ຜູ້ໃຊ້</TabBtn>
           <TabBtn active={tab === "payments"} onClick={() => { setTab("payments"); void loadPayments(paymentFilter); }}>
             <CreditCard className="w-3 h-3 inline mr-1" /> ການຈ່າຍ
           </TabBtn>
           <TabBtn active={tab === "codes"} onClick={() => { setTab("codes"); void loadCodes(codeFilter); }}>ໂຄດເຕີມ</TabBtn>
+          <TabBtn active={tab === "words"} onClick={() => { setTab("words"); void loadWords(wordFilter); }}>
+            <Languages className="w-3 h-3 inline mr-1" /> ຄຳສັບ{stats && stats.pending_words > 0 ? ` (${stats.pending_words})` : ""}
+          </TabBtn>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+        {tab === "stats" && <StatsPanel stats={stats} />}
+
+        {tab === "words" && (
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+            <div className="flex gap-1 mb-3 text-xs flex-wrap">
+              {(["pending", "approved", "rejected", "all"] as WordFilter[]).map((f) => (
+                <FilterPill key={f} active={wordFilter === f} onClick={() => { setWordFilter(f); void loadWords(f); }}>
+                  {f === "pending" ? "ລໍຖ້າ" : f === "approved" ? "ອະນຸມັດແລ້ວ" : f === "rejected" ? "ປະຕິເສດ" : "ທັງໝົດ"}
+                </FilterPill>
+              ))}
+            </div>
+            <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+              {words.map((w) => (
+                <div key={w.id} className="border border-border rounded-2xl p-3 bg-white/40 flex justify-between items-start gap-3 flex-wrap">
+                  <div className="min-w-[200px]">
+                    <div className="font-bold">{w.lao_word} <span className="text-muted-foreground">→</span> <span className="text-primary">{w.karaoke_word}</span></div>
+                    <div className="text-xs text-muted-foreground">{w.full_name ?? w.email} · {new Date(w.created_at).toLocaleString()}</div>
+                    {w.note && <div className="text-xs mt-1">“{w.note}”</div>}
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-bold ${w.status === "pending" ? "bg-yellow-100 text-yellow-800" : w.status === "approved" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{w.status}</span>
+                  </div>
+                  {w.status === "pending" && (
+                    <div className="flex gap-1">
+                      <Button size="sm" className="bg-success text-success-foreground" onClick={() => reviewWord(w.id, true)}><Check className="w-3 h-3 mr-1" /> ອະນຸມັດ</Button>
+                      <Button size="sm" variant="outline" onClick={() => reviewWord(w.id, false)}><X className="w-3 h-3 mr-1" /> ປະຕິເສດ</Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {words.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີຄຳສັບ</div>}
+            </div>
+          </div>
+        )}
+
         {tab === "users" && (
+
           <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
             <div className="flex gap-2 mb-3 flex-wrap">
               <div className="flex-1 relative min-w-[200px]">
@@ -415,5 +517,71 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StatCard({ label, value, icon, tone }: { label: string; value: string | number; icon: React.ReactNode; tone: string }) {
+  return (
+    <div className="glass rounded-2xl p-4 border border-white/40 shadow-soft">
+      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-xl mb-2 ${tone}`}>{icon}</div>
+      <div className="text-2xl font-extrabold leading-none">{typeof value === "number" ? value.toLocaleString() : value}</div>
+      <div className="text-xs text-muted-foreground mt-1">{label}</div>
+    </div>
+  );
+}
+
+function StatsPanel({ stats }: { stats: Stats | null }) {
+  if (!stats) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  const series = (stats.series ?? []).map((s) => ({ ...s, label: String(s.day).slice(5) }));
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="ຜູ້ໃຊ້ທັງໝົດ" value={stats.total_users} icon={<Users className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
+        <StatCard label="Premium ໃຊ້ງານຢູ່" value={stats.premium_users} icon={<Crown className="w-4 h-4 text-premium" />} tone="bg-premium/15" />
+        <StatCard label="ແປວັນນີ້" value={stats.translations_today} icon={<Languages className="w-4 h-4 text-accent" />} tone="bg-accent/15" />
+        <StatCard label="ແປທັງໝົດ" value={stats.translations_total} icon={<BarChart3 className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
+        <StatCard label="ລາຍຮັບ (ກີບ)" value={stats.revenue_total} icon={<Coins className="w-4 h-4 text-success" />} tone="bg-success/15" />
+        <StatCard label="ຈ່າຍລໍຖ້າ" value={stats.pending_payments} icon={<CreditCard className="w-4 h-4 text-accent" />} tone="bg-accent/15" />
+        <StatCard label="ຄຳສັບລໍຖ້າ" value={stats.pending_words} icon={<Languages className="w-4 h-4 text-premium" />} tone="bg-premium/15" />
+        <StatCard label="ໂຄດໃຊ້ໄດ້" value={stats.active_codes} icon={<Ticket className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
+      </div>
+
+      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 shadow-soft">
+        <div className="text-sm font-extrabold mb-3">ການແປ 14 ມື້ຫຼ້າສຸດ</div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={series}>
+              <defs>
+                <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} width={30} allowDecimals={false} />
+              <Tooltip />
+              <Area type="monotone" dataKey="translations" name="ການແປ" stroke="hsl(var(--primary))" fill="url(#tGrad)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 shadow-soft">
+        <div className="text-sm font-extrabold mb-3">ຜູ້ໃຊ້ໃໝ່ ແລະ ຄຳສັບໃໝ່</div>
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} width={30} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="new_users" name="ຜູ້ໃຊ້ໃໝ່" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="words" name="ຄຳສັບໃໝ່" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
   );
 }

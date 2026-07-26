@@ -232,6 +232,45 @@ export type Database = {
         }
         Relationships: []
       }
+      word_suggestions: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          karaoke_word: string
+          lao_word: string
+          note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          karaoke_word: string
+          lao_word: string
+          note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          karaoke_word?: string
+          lao_word?: string
+          note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -277,6 +316,21 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_suggestions: {
+        Args: { p_status?: string }
+        Returns: {
+          admin_note: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          karaoke_word: string
+          lao_word: string
+          note: string
+          status: string
+          user_id: string
+        }[]
+      }
       admin_list_topup_codes: {
         Args: { p_filter?: string }
         Returns: {
@@ -296,6 +350,10 @@ export type Database = {
         Returns: Json
       }
       admin_reset_credits: { Args: { p_user: string }; Returns: Json }
+      admin_review_suggestion: {
+        Args: { p_approve: boolean; p_id: string; p_note?: string }
+        Returns: Json
+      }
       admin_revoke_premium: { Args: { p_user: string }; Returns: Json }
       admin_search_users: {
         Args: { p_query?: string }
@@ -310,6 +368,7 @@ export type Database = {
           premium_until: string
         }[]
       }
+      admin_stats: { Args: { p_days?: number }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -331,6 +390,10 @@ export type Database = {
         Returns: string
       }
       redeem_topup_code: { Args: { p_code: string }; Returns: Json }
+      submit_word_suggestion: {
+        Args: { p_karaoke: string; p_lao: string; p_note?: string }
+        Returns: Json
+      }
       try_consume_translation: { Args: { p_limit?: number }; Returns: Json }
     }
     Enums: {
