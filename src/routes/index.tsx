@@ -237,7 +237,16 @@ function Index() {
                     </span>
                   )}
                 </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowSuggest(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition">
+                    <PlusCircle className="w-3.5 h-3.5" /> ເພີ່ມຄຳສັບ
+                  </button>
+                  <Link to="/api-docs" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs font-bold hover:bg-muted/70 transition">
+                    <Code2 className="w-3.5 h-3.5" /> API
+                  </Link>
+                </div>
               </div>
+
 
               <div className="glass rounded-3xl shadow-soft border border-white/40 p-4 sm:p-6">
                 <div className="flex items-center justify-center gap-2 mb-4 text-sm font-bold">
