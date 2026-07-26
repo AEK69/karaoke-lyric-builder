@@ -280,6 +280,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_valid_payment_plan: {
+        Args: {
+          p_amount: number
+          p_credits: number
+          p_plan_label: string
+          p_premium_days: number
+        }
+        Returns: boolean
+      }
       log_translation: {
         Args: { p_direction: string; p_input: string; p_output: string }
         Returns: string
