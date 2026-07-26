@@ -1,12 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2 } from "lucide-react";
+import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2, BarChart3, Languages, Users, Coins, X } from "lucide-react";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Lao Karaoke" }] }),
