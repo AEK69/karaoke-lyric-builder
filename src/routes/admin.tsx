@@ -252,16 +252,56 @@ function AdminPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
         <div className="inline-flex bg-muted rounded-full p-1 flex-wrap">
+          <TabBtn active={tab === "stats"} onClick={() => { setTab("stats"); void loadStats(); }}>
+            <BarChart3 className="w-3 h-3 inline mr-1" /> ສະຖິຕິ
+          </TabBtn>
           <TabBtn active={tab === "users"} onClick={() => setTab("users")}>ຜູ້ໃຊ້</TabBtn>
           <TabBtn active={tab === "payments"} onClick={() => { setTab("payments"); void loadPayments(paymentFilter); }}>
             <CreditCard className="w-3 h-3 inline mr-1" /> ການຈ່າຍ
           </TabBtn>
           <TabBtn active={tab === "codes"} onClick={() => { setTab("codes"); void loadCodes(codeFilter); }}>ໂຄດເຕີມ</TabBtn>
+          <TabBtn active={tab === "words"} onClick={() => { setTab("words"); void loadWords(wordFilter); }}>
+            <Languages className="w-3 h-3 inline mr-1" /> ຄຳສັບ{stats && stats.pending_words > 0 ? ` (${stats.pending_words})` : ""}
+          </TabBtn>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
+        {tab === "stats" && <StatsPanel stats={stats} />}
+
+        {tab === "words" && (
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+            <div className="flex gap-1 mb-3 text-xs flex-wrap">
+              {(["pending", "approved", "rejected", "all"] as WordFilter[]).map((f) => (
+                <FilterPill key={f} active={wordFilter === f} onClick={() => { setWordFilter(f); void loadWords(f); }}>
+                  {f === "pending" ? "ລໍຖ້າ" : f === "approved" ? "ອະນຸມັດແລ້ວ" : f === "rejected" ? "ປະຕິເສດ" : "ທັງໝົດ"}
+                </FilterPill>
+              ))}
+            </div>
+            <div className="space-y-2 max-h-[70vh] overflow-y-auto">
+              {words.map((w) => (
+                <div key={w.id} className="border border-border rounded-2xl p-3 bg-white/40 flex justify-between items-start gap-3 flex-wrap">
+                  <div className="min-w-[200px]">
+                    <div className="font-bold">{w.lao_word} <span className="text-muted-foreground">→</span> <span className="text-primary">{w.karaoke_word}</span></div>
+                    <div className="text-xs text-muted-foreground">{w.full_name ?? w.email} · {new Date(w.created_at).toLocaleString()}</div>
+                    {w.note && <div className="text-xs mt-1">“{w.note}”</div>}
+                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-bold ${w.status === "pending" ? "bg-yellow-100 text-yellow-800" : w.status === "approved" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{w.status}</span>
+                  </div>
+                  {w.status === "pending" && (
+                    <div className="flex gap-1">
+                      <Button size="sm" className="bg-success text-success-foreground" onClick={() => reviewWord(w.id, true)}><Check className="w-3 h-3 mr-1" /> ອະນຸມັດ</Button>
+                      <Button size="sm" variant="outline" onClick={() => reviewWord(w.id, false)}><X className="w-3 h-3 mr-1" /> ປະຕິເສດ</Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {words.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ບໍ່ມີຄຳສັບ</div>}
+            </div>
+          </div>
+        )}
+
         {tab === "users" && (
+
           <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
             <div className="flex gap-2 mb-3 flex-wrap">
               <div className="flex-1 relative min-w-[200px]">
