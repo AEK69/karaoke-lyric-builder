@@ -43,12 +43,27 @@ function Index() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [showSuggest, setShowSuggest] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Approved community words extend the built-in dictionary.
+  useEffect(() => {
+    supabase
+      .from("word_suggestions")
+      .select("lao_word, karaoke_word")
+      .eq("status", "approved")
+      .limit(5000)
+      .then(({ data }) => {
+        if (data) setCommunityWords(data.map((r) => ({ lao: r.lao_word, karaoke: r.karaoke_word })));
+      });
+  }, []);
+
+
 
   const refresh = async () => {
     if (!session) return;
