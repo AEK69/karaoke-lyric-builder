@@ -1,15 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, Hourglass } from "lucide-react";
+import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, Hourglass, PlusCircle, Code2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { translate, type Direction } from "@/lib/translator";
+import { translate, setCommunityWords, type Direction } from "@/lib/translator";
 import { canonicalOrigin } from "@/lib/canonical-domain";
+import { SuggestWordDialog } from "@/components/SuggestWordDialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import type { Session } from "@supabase/supabase-js";
 
 const FREE_DAILY_LIMIT = 15;
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
