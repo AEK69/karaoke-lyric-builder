@@ -62,7 +62,7 @@ export function translateKaraokeToLao(text: string): string {
     let matched = false;
     for (const key of sortedKeys) {
       if (lower.substr(i, key.length) === key) {
-        result += fullMap[key];
+        result += activeMap[key];
         i += key.length;
         matched = true;
         break;
@@ -86,7 +86,7 @@ export function translateLaoToKaraoke(text: string): string {
     for (const key of sortedKeys) {
       if (text.substr(i, key.length) === key) {
         if (result && !/\s/.test(result[result.length - 1])) result += " ";
-        result += fullMap[key];
+        result += activeMap[key];
         i += key.length;
         matched = true;
         break;
