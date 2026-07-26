@@ -110,6 +110,35 @@ export type Database = {
         }
         Relationships: []
       }
+      topup_code_redemptions: {
+        Row: {
+          code_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topup_code_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "topup_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topup_codes: {
         Row: {
           code: string
@@ -118,8 +147,10 @@ export type Database = {
           credits: number
           expires_at: string | null
           id: string
+          max_uses: number | null
           note: string | null
           premium_days: number
+          use_count: number
           used_at: string | null
           used_by: string | null
         }
@@ -130,8 +161,10 @@ export type Database = {
           credits?: number
           expires_at?: string | null
           id?: string
+          max_uses?: number | null
           note?: string | null
           premium_days?: number
+          use_count?: number
           used_at?: string | null
           used_by?: string | null
         }
@@ -142,8 +175,10 @@ export type Database = {
           credits?: number
           expires_at?: string | null
           id?: string
+          max_uses?: number | null
           note?: string | null
           premium_days?: number
+          use_count?: number
           used_at?: string | null
           used_by?: string | null
         }
@@ -214,11 +249,13 @@ export type Database = {
         Args: {
           p_credits: number
           p_expires_at?: string
+          p_max_uses?: number
           p_note?: string
           p_premium_days: number
         }
         Returns: Json
       }
+      admin_delete_topup_code: { Args: { p_id: string }; Returns: Json }
       admin_grant_premium: {
         Args: { p_days: number; p_user: string }
         Returns: Json
@@ -248,10 +285,10 @@ export type Database = {
           credits: number
           expires_at: string
           id: string
+          max_uses: number
           note: string
           premium_days: number
-          used_at: string
-          used_by: string
+          use_count: number
         }[]
       }
       admin_reject_payment: {
