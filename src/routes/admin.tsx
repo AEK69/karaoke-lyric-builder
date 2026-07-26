@@ -519,3 +519,69 @@ function CreateCodeDialog({ open, onClose, onCreated }: { open: boolean; onClose
     </Dialog>
   );
 }
+
+function StatCard({ label, value, icon, tone }: { label: string; value: string | number; icon: React.ReactNode; tone: string }) {
+  return (
+    <div className="glass rounded-2xl p-4 border border-white/40 shadow-soft">
+      <div className={`inline-flex items-center justify-center w-8 h-8 rounded-xl mb-2 ${tone}`}>{icon}</div>
+      <div className="text-2xl font-extrabold leading-none">{typeof value === "number" ? value.toLocaleString() : value}</div>
+      <div className="text-xs text-muted-foreground mt-1">{label}</div>
+    </div>
+  );
+}
+
+function StatsPanel({ stats }: { stats: Stats | null }) {
+  if (!stats) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+  const series = (stats.series ?? []).map((s) => ({ ...s, label: String(s.day).slice(5) }));
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="ຜູ້ໃຊ້ທັງໝົດ" value={stats.total_users} icon={<Users className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
+        <StatCard label="Premium ໃຊ້ງານຢູ່" value={stats.premium_users} icon={<Crown className="w-4 h-4 text-premium" />} tone="bg-premium/15" />
+        <StatCard label="ແປວັນນີ້" value={stats.translations_today} icon={<Languages className="w-4 h-4 text-accent" />} tone="bg-accent/15" />
+        <StatCard label="ແປທັງໝົດ" value={stats.translations_total} icon={<BarChart3 className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
+        <StatCard label="ລາຍຮັບ (ກີບ)" value={stats.revenue_total} icon={<Coins className="w-4 h-4 text-success" />} tone="bg-success/15" />
+        <StatCard label="ຈ່າຍລໍຖ້າ" value={stats.pending_payments} icon={<CreditCard className="w-4 h-4 text-accent" />} tone="bg-accent/15" />
+        <StatCard label="ຄຳສັບລໍຖ້າ" value={stats.pending_words} icon={<Languages className="w-4 h-4 text-premium" />} tone="bg-premium/15" />
+        <StatCard label="ໂຄດໃຊ້ໄດ້" value={stats.active_codes} icon={<Ticket className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
+      </div>
+
+      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 shadow-soft">
+        <div className="text-sm font-extrabold mb-3">ການແປ 14 ມື້ຫຼ້າສຸດ</div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={series}>
+              <defs>
+                <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} width={30} allowDecimals={false} />
+              <Tooltip />
+              <Area type="monotone" dataKey="translations" name="ການແປ" stroke="hsl(var(--primary))" fill="url(#tGrad)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 shadow-soft">
+        <div className="text-sm font-extrabold mb-3">ຜູ້ໃຊ້ໃໝ່ ແລະ ຄຳສັບໃໝ່</div>
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} width={30} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="new_users" name="ຜູ້ໃຊ້ໃໝ່" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="words" name="ຄຳສັບໃໝ່" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
