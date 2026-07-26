@@ -53,14 +53,43 @@ interface PaymentRow {
   created_at: string;
 }
 
+interface Suggestion {
+  id: string;
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  lao_word: string;
+  karaoke_word: string;
+  note: string | null;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
+interface StatsSeries { day: string; translations: number; new_users: number; words: number }
+interface Stats {
+  total_users: number;
+  premium_users: number;
+  new_users_7d: number;
+  translations_total: number;
+  translations_today: number;
+  pending_payments: number;
+  pending_words: number;
+  approved_words: number;
+  revenue_total: number;
+  active_codes: number;
+  series: StatsSeries[];
+}
+
 type UserFilter = "all" | "premium" | "free";
 type CodeFilter = "all" | "unused" | "used" | "expired";
 type PaymentFilter = "pending" | "approved" | "rejected" | "all";
+type WordFilter = "pending" | "approved" | "rejected" | "all";
 
 function AdminPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"users" | "codes" | "payments">("users");
+  const [tab, setTab] = useState<"stats" | "users" | "codes" | "payments" | "words">("stats");
 
   // Users
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -77,6 +106,11 @@ function AdminPage() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("pending");
 
+  // Words + stats
+  const [words, setWords] = useState<Suggestion[]>([]);
+  const [wordFilter, setWordFilter] = useState<WordFilter>("pending");
+  const [stats, setStats] = useState<Stats | null>(null);
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -84,12 +118,38 @@ function AdminPage() {
       const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", s.session.user.id).eq("role", "admin").maybeSingle();
       if (!r) { setAuthorized(false); return; }
       setAuthorized(true);
+      void loadStats();
       void search("");
       void loadCodes("all");
       void loadPayments("pending");
+      void loadWords("pending");
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadStats() {
+    const { data, error } = await supabase.rpc("admin_stats", { p_days: 14 });
+    if (error) { toast.error(error.message); return; }
+    setStats(data as unknown as Stats);
+  }
+
+  async function loadWords(f: WordFilter) {
+    const { data, error } = await supabase.rpc("admin_list_suggestions", { p_status: f });
+    if (error) { toast.error(error.message); return; }
+    setWords((data ?? []) as Suggestion[]);
+  }
+
+  async function reviewWord(id: string, approve: boolean) {
+    const note = approve ? null : (prompt("ເຫດຜົນປະຕິເສດ (ບໍ່ຈຳເປັນ)") ?? null);
+    const { data, error } = await supabase.rpc("admin_review_suggestion", { p_id: id, p_approve: approve, p_note: note ?? undefined });
+    if (error) return toast.error(error.message);
+    const r = data as { ok: boolean; error?: string };
+    if (!r.ok) return toast.error(r.error ?? "ຜິດພາດ");
+    toast.success(approve ? "ອະນຸມັດແລ້ວ — ຜູ້ສົ່ງໄດ້ Premium 1 ມື້" : "ປະຕິເສດແລ້ວ");
+    void loadWords(wordFilter);
+    void loadStats();
+  }
+
 
   async function search(q: string) {
     setLoading(true);
