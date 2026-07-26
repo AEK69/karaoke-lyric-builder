@@ -13,6 +13,7 @@ import { Route as RedeemRouteImport } from './routes/redeem'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicTranslateRouteImport } from './routes/api/public/translate'
 
 const RedeemRoute = RedeemRouteImport.update({
   id: '/redeem',
@@ -34,18 +35,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTranslateRoute = ApiPublicTranslateRouteImport.update({
+  id: '/api/public/translate',
+  path: '/api/public/translate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/payment': typeof PaymentRoute
   '/redeem': typeof RedeemRoute
+  '/api/public/translate': typeof ApiPublicTranslateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/payment': typeof PaymentRoute
   '/redeem': typeof RedeemRoute
+  '/api/public/translate': typeof ApiPublicTranslateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/payment': typeof PaymentRoute
   '/redeem': typeof RedeemRoute
+  '/api/public/translate': typeof ApiPublicTranslateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/payment' | '/redeem'
+  fullPaths: '/' | '/admin' | '/payment' | '/redeem' | '/api/public/translate'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/payment' | '/redeem'
-  id: '__root__' | '/' | '/admin' | '/payment' | '/redeem'
+  to: '/' | '/admin' | '/payment' | '/redeem' | '/api/public/translate'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/payment'
+    | '/redeem'
+    | '/api/public/translate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +82,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   PaymentRoute: typeof PaymentRoute
   RedeemRoute: typeof RedeemRoute
+  ApiPublicTranslateRoute: typeof ApiPublicTranslateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/translate': {
+      id: '/api/public/translate'
+      path: '/api/public/translate'
+      fullPath: '/api/public/translate'
+      preLoaderRoute: typeof ApiPublicTranslateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   PaymentRoute: PaymentRoute,
   RedeemRoute: RedeemRoute,
+  ApiPublicTranslateRoute: ApiPublicTranslateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
