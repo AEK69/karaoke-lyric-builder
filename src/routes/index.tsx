@@ -294,7 +294,9 @@ function Index() {
         </div>
       </main>
 
+      <SuggestWordDialog open={showSuggest} onClose={() => setShowSuggest(false)} />
     </div>
+
   );
 }
 
