@@ -46,6 +46,8 @@ function Index() {
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [apiQuota, setApiQuota] = useState<{ limit: number; remaining: number } | null>(null);
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
