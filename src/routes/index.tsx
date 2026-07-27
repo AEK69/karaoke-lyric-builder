@@ -144,6 +144,10 @@ function Index() {
       if (profile) setProfile({ ...profile, extra_credits: res.credits });
       const translated = translate(text, direction);
       setOutput(translated);
+      // Popular-word stats power the public /api/public/stats endpoint.
+      const words = extractKnownWords(text, direction);
+      if (words.length) void supabase.rpc("record_word_usage", { p_words: words, p_direction: direction });
+
     } catch (e) {
       toast.error("ເກີດຂໍ້ຜິດພາດ", { description: e instanceof Error ? e.message : String(e) });
     } finally { setBusy(false); }
