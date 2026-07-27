@@ -108,3 +108,25 @@ export function translate(text: string, dir: Direction): string {
   if (!text.trim()) return "";
   return dir === "lao-to-karaoke" ? translateLaoToKaraoke(text) : translateKaraokeToLao(text);
 }
+
+/** Dictionary words that actually matched in the given text — used for usage stats. */
+export function extractKnownWords(text: string, dir: Direction): string[] {
+  const src = dir === "lao-to-karaoke" ? text : text.toLowerCase();
+  const out: string[] = [];
+  let i = 0;
+  while (i < src.length && out.length < 200) {
+    if (/\s/.test(src[i])) { i++; continue; }
+    let matched = false;
+    for (const key of sortedKeys) {
+      if (src.substr(i, key.length) === key) {
+        out.push(key);
+        i += key.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) i++;
+  }
+  return out;
+}
+
