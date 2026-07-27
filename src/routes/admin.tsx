@@ -586,11 +586,24 @@ function StatCard({ label, value, icon, tone }: { label: string; value: string |
   );
 }
 
-function StatsPanel({ stats }: { stats: Stats | null }) {
+function StatsPanel({ stats, topWords = [] }: { stats: Stats | null; topWords?: Array<{ word: string; uses: number }> }) {
   if (!stats) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   const series = (stats.series ?? []).map((s) => ({ ...s, label: String(s.day).slice(5) }));
   return (
     <div className="space-y-4">
+      {topWords.length > 0 && (
+        <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="text-sm font-extrabold mb-3">ຄຳຍອດນິຍົມ 14 ມື້</div>
+          <div className="flex flex-wrap gap-2">
+            {topWords.map((w) => (
+              <span key={w.word} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                {w.word} · {w.uses}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="ຜູ້ໃຊ້ທັງໝົດ" value={stats.total_users} icon={<Users className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
         <StatCard label="Premium ໃຊ້ງານຢູ່" value={stats.premium_users} icon={<Crown className="w-4 h-4 text-premium" />} tone="bg-premium/15" />
