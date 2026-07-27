@@ -121,6 +121,10 @@ function AdminPage() {
   const [wordFilter, setWordFilter] = useState<WordFilter>("pending");
   const [stats, setStats] = useState<Stats | null>(null);
 
+  // Audit log
+  const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [topWords, setTopWords] = useState<Array<{ word: string; uses: number }>>([]);
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -141,7 +145,16 @@ function AdminPage() {
     const { data, error } = await supabase.rpc("admin_stats", { p_days: 14 });
     if (error) { toast.error(error.message); return; }
     setStats(data as unknown as Stats);
+    const { data: top } = await supabase.rpc("public_top_words", { p_days: 14, p_limit: 10 });
+    setTopWords((top ?? []).map((r) => ({ word: r.word, uses: Number(r.uses) })));
   }
+
+  async function loadAudit() {
+    const { data, error } = await supabase.rpc("admin_list_audit_logs", { p_limit: 200 });
+    if (error) { toast.error(error.message); return; }
+    setAudit((data ?? []) as unknown as AuditRow[]);
+  }
+
 
   async function loadWords(f: WordFilter) {
     const { data, error } = await supabase.rpc("admin_list_suggestions", { p_status: f });
