@@ -504,6 +504,10 @@ export type Database = {
       }
       admin_stats: { Args: { p_days?: number }; Returns: Json }
       api_consume: { Args: { p_key: string; p_limit?: number }; Returns: Json }
+      api_quota_status: {
+        Args: { p_key: string; p_limit?: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
