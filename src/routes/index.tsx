@@ -67,6 +67,18 @@ function Index() {
       });
   }, []);
 
+  // Remaining quota of the free public API (per caller, per day).
+  useEffect(() => {
+    fetch("/api/public/stats?days=1&limit=1")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.quota) setApiQuota({ limit: Number(d.quota.limit), remaining: Number(d.quota.remaining) });
+      })
+      .catch(() => undefined);
+  }, []);
+
+
+
 
 
   const refresh = async () => {
