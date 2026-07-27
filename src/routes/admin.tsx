@@ -81,6 +81,15 @@ interface Stats {
   series: StatsSeries[];
 }
 
+interface AuditRow {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_email: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
 type UserFilter = "all" | "premium" | "free";
 type CodeFilter = "all" | "unused" | "used" | "expired";
 type PaymentFilter = "pending" | "approved" | "rejected" | "all";
@@ -89,7 +98,8 @@ type WordFilter = "pending" | "approved" | "rejected" | "all";
 function AdminPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"stats" | "users" | "codes" | "payments" | "words">("stats");
+  const [tab, setTab] = useState<"stats" | "users" | "codes" | "payments" | "words" | "audit">("stats");
+
 
   // Users
   const [users, setUsers] = useState<AdminUser[]>([]);
