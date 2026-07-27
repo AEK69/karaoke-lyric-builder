@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2, BarChart3, Languages, Users, Coins, X } from "lucide-react";
+import { ArrowLeft, Crown, Plus, Search, Loader2, Copy, Check, Ticket, CreditCard, RotateCcw, Filter, Trash2, BarChart3, Languages, Users, Coins, X, ScrollText } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,15 @@ interface Stats {
   series: StatsSeries[];
 }
 
+interface AuditRow {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_email: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
 type UserFilter = "all" | "premium" | "free";
 type CodeFilter = "all" | "unused" | "used" | "expired";
 type PaymentFilter = "pending" | "approved" | "rejected" | "all";
@@ -89,7 +98,8 @@ type WordFilter = "pending" | "approved" | "rejected" | "all";
 function AdminPage() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<"stats" | "users" | "codes" | "payments" | "words">("stats");
+  const [tab, setTab] = useState<"stats" | "users" | "codes" | "payments" | "words" | "audit">("stats");
+
 
   // Users
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -111,6 +121,10 @@ function AdminPage() {
   const [wordFilter, setWordFilter] = useState<WordFilter>("pending");
   const [stats, setStats] = useState<Stats | null>(null);
 
+  // Audit log
+  const [audit, setAudit] = useState<AuditRow[]>([]);
+  const [topWords, setTopWords] = useState<Array<{ word: string; uses: number }>>([]);
+
   useEffect(() => {
     (async () => {
       const { data: s } = await supabase.auth.getSession();
@@ -131,7 +145,16 @@ function AdminPage() {
     const { data, error } = await supabase.rpc("admin_stats", { p_days: 14 });
     if (error) { toast.error(error.message); return; }
     setStats(data as unknown as Stats);
+    const { data: top } = await supabase.rpc("public_top_words", { p_days: 14, p_limit: 10 });
+    setTopWords((top ?? []).map((r) => ({ word: r.word, uses: Number(r.uses) })));
   }
+
+  async function loadAudit() {
+    const { data, error } = await supabase.rpc("admin_list_audit_logs", { p_limit: 200 });
+    if (error) { toast.error(error.message); return; }
+    setAudit((data ?? []) as unknown as AuditRow[]);
+  }
+
 
   async function loadWords(f: WordFilter) {
     const { data, error } = await supabase.rpc("admin_list_suggestions", { p_status: f });
@@ -263,11 +286,44 @@ function AdminPage() {
           <TabBtn active={tab === "words"} onClick={() => { setTab("words"); void loadWords(wordFilter); }}>
             <Languages className="w-3 h-3 inline mr-1" /> ຄຳສັບ{stats && stats.pending_words > 0 ? ` (${stats.pending_words})` : ""}
           </TabBtn>
+          <TabBtn active={tab === "audit"} onClick={() => { setTab("audit"); void loadAudit(); }}>
+            <ScrollText className="w-3 h-3 inline mr-1" /> Audit Log
+          </TabBtn>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
-        {tab === "stats" && <StatsPanel stats={stats} />}
+        {tab === "stats" && <StatsPanel stats={stats} topWords={topWords} />}
+
+        {tab === "audit" && (
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-extrabold">ບັນທຶກການດຳເນີນງານ (Audit Log)</div>
+              <button onClick={() => void loadAudit()} className="text-xs font-bold text-primary inline-flex items-center gap-1">
+                <RotateCcw className="w-3 h-3" /> ໂຫຼດໃໝ່
+              </button>
+            </div>
+            <div className="space-y-2">
+              {audit.map((a) => (
+                <div key={a.id} className="rounded-xl border border-border bg-white/50 p-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{a.action}</span>
+                    <span className="font-semibold">{a.actor_email ?? "system"}</span>
+                    {a.target_email && <span className="text-muted-foreground">→ {a.target_email}</span>}
+                    <span className="ml-auto text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
+                  </div>
+                  {a.details && (
+                    <pre className="mt-1 text-[11px] text-muted-foreground whitespace-pre-wrap break-all">
+                      {JSON.stringify(a.details)}
+                    </pre>
+                  )}
+                </div>
+              ))}
+              {audit.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ຍັງບໍ່ມີບັນທຶກ</div>}
+            </div>
+          </div>
+        )}
+
 
         {tab === "words" && (
           <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
@@ -530,11 +586,24 @@ function StatCard({ label, value, icon, tone }: { label: string; value: string |
   );
 }
 
-function StatsPanel({ stats }: { stats: Stats | null }) {
+function StatsPanel({ stats, topWords = [] }: { stats: Stats | null; topWords?: Array<{ word: string; uses: number }> }) {
   if (!stats) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin" /></div>;
   const series = (stats.series ?? []).map((s) => ({ ...s, label: String(s.day).slice(5) }));
   return (
     <div className="space-y-4">
+      {topWords.length > 0 && (
+        <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="text-sm font-extrabold mb-3">ຄຳຍອດນິຍົມ 14 ມື້</div>
+          <div className="flex flex-wrap gap-2">
+            {topWords.map((w) => (
+              <span key={w.word} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                {w.word} · {w.uses}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="ຜູ້ໃຊ້ທັງໝົດ" value={stats.total_users} icon={<Users className="w-4 h-4 text-primary" />} tone="bg-primary/15" />
         <StatCard label="Premium ໃຊ້ງານຢູ່" value={stats.premium_users} icon={<Crown className="w-4 h-4 text-premium" />} tone="bg-premium/15" />

@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import { translate, setCommunityWords, type Direction } from "@/lib/translator";
-import type { Database } from "@/integrations/supabase/types";
+import { translate, setCommunityWords, extractKnownWords, type Direction } from "@/lib/translator";
+import { createPublicClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,20 +21,8 @@ let wordsLoadedAt = 0;
 async function loadCommunityWords() {
   // Refresh the approved community dictionary at most once a minute per worker.
   if (Date.now() - wordsLoadedAt < 60_000) return;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return;
-  const client = createClient<Database>(url, key, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-    global: {
-      fetch: (input, init) => {
-        const h = new Headers(init?.headers);
-        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
-        h.set("apikey", key);
-        return fetch(input, { ...init, headers: h });
-      },
-    },
-  });
+  const client = createPublicClient();
+  if (!client) return;
   const { data } = await client
     .from("word_suggestions")
     .select("lao_word, karaoke_word")
@@ -47,26 +34,64 @@ async function loadCommunityWords() {
   }
 }
 
-function json(payload: unknown, status = 200) {
+function json(payload: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", ...CORS },
+    headers: { "content-type": "application/json; charset=utf-8", ...CORS, ...extraHeaders },
   });
 }
 
-async function handle(text: unknown, direction: unknown) {
+interface Quota { allowed: boolean; limit: number; used: number; remaining: number }
+
+async function handle(request: Request, text: unknown, direction: unknown) {
   const parsed = bodySchema.safeParse({ text, direction: direction ?? "lao-to-karaoke" });
   if (!parsed.success) {
     return json({ ok: false, error: "invalid_input", detail: parsed.error.issues[0]?.message }, 400);
   }
+
+  const client = createPublicClient();
+  let quota: Quota = { allowed: true, limit: PUBLIC_API_DAILY_LIMIT, used: 0, remaining: PUBLIC_API_DAILY_LIMIT };
+
+  if (client) {
+    const key = await clientKeyFromRequest(request);
+    const { data } = await client.rpc("api_consume", { p_key: key, p_limit: PUBLIC_API_DAILY_LIMIT });
+    if (data) quota = data as unknown as Quota;
+  }
+
+  const quotaHeaders = {
+    "X-RateLimit-Limit": String(quota.limit),
+    "X-RateLimit-Remaining": String(quota.remaining),
+  };
+
+  if (!quota.allowed) {
+    return json(
+      { ok: false, error: "quota_exceeded", quota: { limit: quota.limit, used: quota.used, remaining: 0 } },
+      429,
+      quotaHeaders,
+    );
+  }
+
   await loadCommunityWords();
-  const result = translate(parsed.data.text, parsed.data.direction as Direction);
-  return json({
-    ok: true,
-    direction: parsed.data.direction,
-    input: parsed.data.text,
-    result,
-  });
+  const dir = parsed.data.direction as Direction;
+  const result = translate(parsed.data.text, dir);
+
+  // Fire-and-forget usage stats for the popular-words endpoint.
+  if (client) {
+    const words = extractKnownWords(parsed.data.text, dir);
+    if (words.length) void client.rpc("record_word_usage", { p_words: words, p_direction: dir });
+  }
+
+  return json(
+    {
+      ok: true,
+      direction: parsed.data.direction,
+      input: parsed.data.text,
+      result,
+      quota: { limit: quota.limit, used: quota.used, remaining: quota.remaining },
+    },
+    200,
+    quotaHeaders,
+  );
 }
 
 export const Route = createFileRoute("/api/public/translate")({
@@ -75,7 +100,7 @@ export const Route = createFileRoute("/api/public/translate")({
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
       GET: async ({ request }) => {
         const url = new URL(request.url);
-        return handle(url.searchParams.get("text") ?? "", url.searchParams.get("direction") ?? undefined);
+        return handle(request, url.searchParams.get("text") ?? "", url.searchParams.get("direction") ?? undefined);
       },
       POST: async ({ request }) => {
         let body: unknown;
@@ -85,7 +110,7 @@ export const Route = createFileRoute("/api/public/translate")({
           return json({ ok: false, error: "invalid_json" }, 400);
         }
         const b = (body ?? {}) as Record<string, unknown>;
-        return handle(b.text, b.direction);
+        return handle(request, b.text, b.direction);
       },
     },
   },

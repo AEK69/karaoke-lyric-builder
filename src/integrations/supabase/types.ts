@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_usage: {
+        Row: {
+          client_key: string
+          count: number
+          created_at: string
+          id: string
+          updated_at: string
+          used_date: string
+        }
+        Insert: {
+          client_key: string
+          count?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          used_date?: string
+        }
+        Update: {
+          client_key?: string
+          count?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          used_date?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          target_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          target_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          target_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       daily_usage: {
         Row: {
           count: number
@@ -28,6 +85,42 @@ export type Database = {
         Update: {
           count?: number
           used_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          meta: Json
+          read_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          read_at?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          meta?: Json
+          read_at?: string | null
+          title?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -271,6 +364,36 @@ export type Database = {
         }
         Relationships: []
       }
+      word_usage: {
+        Row: {
+          count: number
+          created_at: string
+          direction: string
+          id: string
+          updated_at: string
+          used_date: string
+          word: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          direction?: string
+          id?: string
+          updated_at?: string
+          used_date?: string
+          word: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          direction?: string
+          id?: string
+          updated_at?: string
+          used_date?: string
+          word?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -298,6 +421,17 @@ export type Database = {
       admin_grant_premium: {
         Args: { p_days: number; p_user: string }
         Returns: Json
+      }
+      admin_list_audit_logs: {
+        Args: { p_limit?: number }
+        Returns: {
+          action: string
+          actor_email: string
+          created_at: string
+          details: Json
+          id: string
+          target_email: string
+        }[]
       }
       admin_list_payments: {
         Args: { p_status?: string }
@@ -369,6 +503,11 @@ export type Database = {
         }[]
       }
       admin_stats: { Args: { p_days?: number }; Returns: Json }
+      api_consume: { Args: { p_key: string; p_limit?: number }; Returns: Json }
+      api_quota_status: {
+        Args: { p_key: string; p_limit?: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -388,6 +527,26 @@ export type Database = {
       log_translation: {
         Args: { p_direction: string; p_input: string; p_output: string }
         Returns: string
+      }
+      mark_notifications_read: { Args: never; Returns: Json }
+      public_top_words: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: {
+          direction: string
+          uses: number
+          word: string
+        }[]
+      }
+      public_word_usage_series: {
+        Args: { p_days?: number }
+        Returns: {
+          day: string
+          uses: number
+        }[]
+      }
+      record_word_usage: {
+        Args: { p_direction?: string; p_words: string[] }
+        Returns: Json
       }
       redeem_topup_code: { Args: { p_code: string }; Returns: Json }
       submit_word_suggestion: {

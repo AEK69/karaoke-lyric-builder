@@ -2,15 +2,17 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftRight, Copy, Crown, LogOut, Sparkles, Zap, Loader2, Check, Gift, Shield, Hourglass, PlusCircle, Code2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { translate, setCommunityWords, type Direction } from "@/lib/translator";
+import { translate, setCommunityWords, extractKnownWords, type Direction } from "@/lib/translator";
 import { canonicalOrigin } from "@/lib/canonical-domain";
 import { SuggestWordDialog } from "@/components/SuggestWordDialog";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import type { Session } from "@supabase/supabase-js";
 
 const FREE_DAILY_LIMIT = 15;
+
 
 
 export const Route = createFileRoute("/")({
@@ -44,6 +46,8 @@ function Index() {
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [apiQuota, setApiQuota] = useState<{ limit: number; remaining: number } | null>(null);
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -62,6 +66,18 @@ function Index() {
         if (data) setCommunityWords(data.map((r) => ({ lao: r.lao_word, karaoke: r.karaoke_word })));
       });
   }, []);
+
+  // Remaining quota of the free public API (per caller, per day).
+  useEffect(() => {
+    fetch("/api/public/stats?days=1&limit=1")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.quota) setApiQuota({ limit: Number(d.quota.limit), remaining: Number(d.quota.remaining) });
+      })
+      .catch(() => undefined);
+  }, []);
+
+
 
 
 
@@ -140,6 +156,10 @@ function Index() {
       if (profile) setProfile({ ...profile, extra_credits: res.credits });
       const translated = translate(text, direction);
       setOutput(translated);
+      // Popular-word stats power the public /api/public/stats endpoint.
+      const words = extractKnownWords(text, direction);
+      if (words.length) void supabase.rpc("record_word_usage", { p_words: words, p_direction: direction });
+
     } catch (e) {
       toast.error("ເກີດຂໍ້ຜິດພາດ", { description: e instanceof Error ? e.message : String(e) });
     } finally { setBusy(false); }
@@ -173,7 +193,9 @@ function Index() {
                   <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
+              <NotificationBell userId={session.user.id} />
               {isPremium ? (
+
                 <span title="Premium" className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft whitespace-nowrap">
                   <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                   <span className="sm:hidden">ພຣີມຽມ</span>
@@ -236,6 +258,12 @@ function Index() {
                       +{credits} ເຄຣດິດ
                     </span>
                   )}
+                  {apiQuota && (
+                    <span title="ໂຄຕ້າ API ສາທາລະນະຕໍ່ມື້" className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-bold">
+                      API ເຫຼືອ {apiQuota.remaining}/{apiQuota.limit}
+                    </span>
+                  )}
+
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setShowSuggest(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition">
