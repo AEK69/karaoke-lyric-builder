@@ -286,11 +286,44 @@ function AdminPage() {
           <TabBtn active={tab === "words"} onClick={() => { setTab("words"); void loadWords(wordFilter); }}>
             <Languages className="w-3 h-3 inline mr-1" /> ຄຳສັບ{stats && stats.pending_words > 0 ? ` (${stats.pending_words})` : ""}
           </TabBtn>
+          <TabBtn active={tab === "audit"} onClick={() => { setTab("audit"); void loadAudit(); }}>
+            <ScrollText className="w-3 h-3 inline mr-1" /> Audit Log
+          </TabBtn>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-12">
-        {tab === "stats" && <StatsPanel stats={stats} />}
+        {tab === "stats" && <StatsPanel stats={stats} topWords={topWords} />}
+
+        {tab === "audit" && (
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-extrabold">ບັນທຶກການດຳເນີນງານ (Audit Log)</div>
+              <button onClick={() => void loadAudit()} className="text-xs font-bold text-primary inline-flex items-center gap-1">
+                <RotateCcw className="w-3 h-3" /> ໂຫຼດໃໝ່
+              </button>
+            </div>
+            <div className="space-y-2">
+              {audit.map((a) => (
+                <div key={a.id} className="rounded-xl border border-border bg-white/50 p-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{a.action}</span>
+                    <span className="font-semibold">{a.actor_email ?? "system"}</span>
+                    {a.target_email && <span className="text-muted-foreground">→ {a.target_email}</span>}
+                    <span className="ml-auto text-muted-foreground">{new Date(a.created_at).toLocaleString()}</span>
+                  </div>
+                  {a.details && (
+                    <pre className="mt-1 text-[11px] text-muted-foreground whitespace-pre-wrap break-all">
+                      {JSON.stringify(a.details)}
+                    </pre>
+                  )}
+                </div>
+              ))}
+              {audit.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ຍັງບໍ່ມີບັນທຶກ</div>}
+            </div>
+          </div>
+        )}
+
 
         {tab === "words" && (
           <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
