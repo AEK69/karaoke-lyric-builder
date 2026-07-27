@@ -193,7 +193,9 @@ function Index() {
                   <span className="hidden sm:inline">Admin</span>
                 </Link>
               )}
+              <NotificationBell userId={session.user.id} />
               {isPremium ? (
+
                 <span title="Premium" className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft whitespace-nowrap">
                   <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                   <span className="sm:hidden">ພຣີມຽມ</span>
