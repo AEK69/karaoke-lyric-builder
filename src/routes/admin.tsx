@@ -470,7 +470,21 @@ function UserRow({ u, onGrant, onRevoke, onAdd, onReset }: { u: AdminUser; onGra
           <div className="flex gap-2 mt-1 text-xs flex-wrap">
             {active && <span className="px-2 py-0.5 rounded-full bg-gradient-premium text-premium-foreground font-bold">PREMIUM{u.premium_until ? ` · ${new Date(u.premium_until).toLocaleDateString()}` : ""}</span>}
             <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent font-bold">{u.extra_credits} ເຄຣດິດ</span>
+            <span
+              title="ການໃຊ້ງານຟຣີມື້ນີ້"
+              className={`px-2 py-0.5 rounded-full font-bold ${u.free_remaining === 0 && !active ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}
+            >
+              ມື້ນີ້ {u.used_today}/15 · ເຫຼືອຟຣີ {u.free_remaining < 0 ? "∞" : u.free_remaining}
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-bold" title="ແປທັງໝົດຕະຫຼອດ">
+              ລວມ {Number(u.total_translations).toLocaleString()} ຄັ້ງ
+            </span>
           </div>
+          {!active && (
+            <div className="mt-1.5 h-1.5 w-full max-w-[220px] rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-button" style={{ width: `${Math.min(100, (u.used_today / 15) * 100)}%` }} />
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-1">
           <Button size="sm" variant="outline" onClick={() => onGrant(u.id, 30)}><Crown className="w-3 h-3 mr-1" /> +30ມື້</Button>
