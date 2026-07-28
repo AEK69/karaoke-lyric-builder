@@ -20,6 +20,7 @@ import { translate, setCommunityWords, extractKnownWords, type Direction } from 
 import { canonicalOrigin } from "@/lib/canonical-domain";
 import { SuggestWordDialog } from "@/components/SuggestWordDialog";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -254,76 +255,79 @@ function Index() {
               </p>
             </div>
           </div>
-          {session && (
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  title="Admin"
-                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-foreground text-background text-[11px] sm:text-xs font-bold shadow-soft hover:opacity-90 whitespace-nowrap"
-                >
-                  <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                  <span className="sm:hidden">ແອັດມິນ</span>
-                  <span className="hidden sm:inline">Admin</span>
-                </Link>
-              )}
-              <NotificationBell userId={session.user.id} />
-              {isPremium ? (
-                <span
-                  title="Premium"
-                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft whitespace-nowrap"
-                >
-                  <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                  <span className="sm:hidden">ພຣີມຽມ</span>
-                  <span className="hidden sm:inline">PREMIUM</span>
-                </span>
-              ) : (
-                <button
-                  onClick={() => navigate({ to: "/payment" })}
-                  title="Upgrade Premium"
-                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft hover:scale-105 transition whitespace-nowrap"
-                >
-                  <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                  <span className="sm:hidden">ສະໝັກ</span>
-                  <span className="hidden sm:inline">Upgrade</span>
-                </button>
-              )}
-              <Link
-                to="/redeem"
-                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-accent/15 text-accent text-[11px] sm:text-xs font-bold hover:bg-accent/25 transition whitespace-nowrap"
-                title="ໃຊ້ໂຄດເຕີມ"
-              >
-                <Gift className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> ໂຄດ
-              </Link>
-              {(() => {
-                const meta = session.user.user_metadata ?? {};
-                const avatarUrl = profile?.avatar_url ?? meta.avatar_url ?? meta.picture;
-                const name =
-                  profile?.full_name ?? meta.full_name ?? meta.name ?? session.user.email;
-                return avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={name ?? ""}
-                    referrerPolicy="no-referrer"
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-primary/30 object-cover shrink-0"
-                  />
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <ThemeToggle />
+            {session && (
+              <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    title="Admin"
+                    className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-foreground text-background text-[11px] sm:text-xs font-bold shadow-soft hover:opacity-90 whitespace-nowrap"
+                  >
+                    <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                    <span className="sm:hidden">ແອັດມິນ</span>
+                    <span className="hidden sm:inline">Admin</span>
+                  </Link>
+                )}
+                <NotificationBell userId={session.user.id} />
+                {isPremium ? (
+                  <span
+                    title="Premium"
+                    className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft whitespace-nowrap"
+                  >
+                    <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                    <span className="sm:hidden">ພຣີມຽມ</span>
+                    <span className="hidden sm:inline">PREMIUM</span>
+                  </span>
                 ) : (
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary shrink-0">
-                    {(name ?? "?")[0].toUpperCase()}
-                  </div>
-                );
-              })()}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                title="Logout"
-                className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+                  <button
+                    onClick={() => navigate({ to: "/payment" })}
+                    title="Upgrade Premium"
+                    className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-premium text-premium-foreground text-[11px] sm:text-xs font-bold shadow-soft hover:scale-105 transition whitespace-nowrap"
+                  >
+                    <Crown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                    <span className="sm:hidden">ສະໝັກ</span>
+                    <span className="hidden sm:inline">Upgrade</span>
+                  </button>
+                )}
+                <Link
+                  to="/redeem"
+                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-accent/15 text-accent text-[11px] sm:text-xs font-bold hover:bg-accent/25 transition whitespace-nowrap"
+                  title="ໃຊ້ໂຄດເຕີມ"
+                >
+                  <Gift className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> ໂຄດ
+                </Link>
+                {(() => {
+                  const meta = session.user.user_metadata ?? {};
+                  const avatarUrl = profile?.avatar_url ?? meta.avatar_url ?? meta.picture;
+                  const name =
+                    profile?.full_name ?? meta.full_name ?? meta.name ?? session.user.email;
+                  return avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={name ?? ""}
+                      referrerPolicy="no-referrer"
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-primary/30 object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary shrink-0">
+                      {(name ?? "?")[0].toUpperCase()}
+                    </div>
+                  );
+                })()}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  title="Logout"
+                  className="h-8 w-8 sm:h-9 sm:w-9 shrink-0"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
