@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { translate, setCommunityWords, extractKnownWords, type Direction } from "@/lib/translator";
-import { createPublicClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
+import {
+  createPublicClient,
+  createTrustedRpcClient,
+  clientKeyFromRequest,
+  PUBLIC_API_DAILY_LIMIT,
+} from "@/lib/public-api";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",

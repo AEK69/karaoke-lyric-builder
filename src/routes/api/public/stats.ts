@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { createPublicClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
+import { createTrustedRpcClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
