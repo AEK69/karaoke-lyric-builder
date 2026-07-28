@@ -496,10 +496,13 @@ export type Database = {
           created_at: string
           email: string
           extra_credits: number
+          free_remaining: number
           full_name: string
           id: string
           is_premium: boolean
           premium_until: string
+          total_translations: number
+          used_today: number
         }[]
       }
       admin_stats: { Args: { p_days?: number }; Returns: Json }
