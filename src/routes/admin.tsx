@@ -1029,6 +1029,22 @@ function StatCard({
   );
 }
 
+// Recharts styling that follows the light/dark theme via CSS variables, so
+// axis labels, grid and tooltips stay readable in both modes.
+const CHART_AXIS_TICK = { fill: "var(--muted-foreground)", fontSize: 11 };
+const CHART_TOOLTIP = {
+  contentStyle: {
+    background: "var(--popover)",
+    border: "1px solid var(--border)",
+    borderRadius: "0.75rem",
+    color: "var(--popover-foreground)",
+    fontSize: "12px",
+  },
+  labelStyle: { color: "var(--foreground)", fontWeight: 700 },
+  itemStyle: { color: "var(--foreground)" },
+  cursor: { fill: "var(--muted-foreground)", opacity: 0.12 },
+} as const;
+
 function StatsPanel({
   stats,
   topWords = [],
@@ -1119,25 +1135,29 @@ function StatsPanel({
             <AreaChart data={series}>
               <defs>
                 <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.05} />
+                  <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.05} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--muted-foreground)"
+                opacity={0.15}
+              />
+              <XAxis dataKey="label" tick={CHART_AXIS_TICK} tickLine={false} axisLine={false} />
               <YAxis
-                fontSize={11}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 width={30}
                 allowDecimals={false}
               />
-              <Tooltip />
+              <Tooltip {...CHART_TOOLTIP} />
               <Area
                 type="monotone"
                 dataKey="translations"
                 name="ການແປ"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 fill="url(#tGrad)"
                 strokeWidth={2}
               />
@@ -1151,28 +1171,27 @@ function StatsPanel({
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={series}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="label" fontSize={11} tickLine={false} axisLine={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--muted-foreground)"
+                opacity={0.15}
+              />
+              <XAxis dataKey="label" tick={CHART_AXIS_TICK} tickLine={false} axisLine={false} />
               <YAxis
-                fontSize={11}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 width={30}
                 allowDecimals={false}
               />
-              <Tooltip />
+              <Tooltip {...CHART_TOOLTIP} />
               <Bar
                 dataKey="new_users"
                 name="ຜູ້ໃຊ້ໃໝ່"
-                fill="hsl(var(--accent))"
+                fill="var(--accent)"
                 radius={[6, 6, 0, 0]}
               />
-              <Bar
-                dataKey="words"
-                name="ຄຳສັບໃໝ່"
-                fill="hsl(var(--primary))"
-                radius={[6, 6, 0, 0]}
-              />
+              <Bar dataKey="words" name="ຄຳສັບໃໝ່" fill="var(--primary)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
