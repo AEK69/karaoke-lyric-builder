@@ -47,7 +47,7 @@ function ApiDocs() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-        <div className="glass rounded-3xl p-5 sm:p-7 border border-white/40 shadow-soft">
+        <div className="glass rounded-3xl p-5 sm:p-7 border border-white/40 dark:border-white/10 shadow-soft">
           <p className="text-sm text-muted-foreground mb-5">
             ໃຊ້ໄດ້ຟຣີ, ບໍ່ຕ້ອງມີ API key, ຮອງຮັບ CORS ທຸກໂດເມນ. ຂໍ້ຄວາມສູງສຸດ 5,000
             ຕົວອັກສອນຕໍ່ຄັ້ງ.

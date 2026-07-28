@@ -338,7 +338,7 @@ function Index() {
           ) : (
             <>
               {/* Usage card — reads like a mobile app status tile */}
-              <div className="glass rounded-3xl border border-white/40 shadow-soft p-4 mb-4">
+              <div className="glass rounded-3xl border border-white/40 dark:border-white/10 shadow-soft p-4 mb-4">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 text-sm">
@@ -387,7 +387,7 @@ function Index() {
                 </div>
               </div>
 
-              <div className="glass rounded-3xl shadow-soft border border-white/40 p-4 sm:p-6">
+              <div className="glass rounded-3xl shadow-soft border border-white/40 dark:border-white/10 p-4 sm:p-6">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 text-sm font-bold">
                   <button
                     onClick={() => {
@@ -451,7 +451,7 @@ function Index() {
                       : "Type karaoke text here..."
                   }
                   rows={4}
-                  className="w-full rounded-2xl bg-white/70 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none p-4 text-base resize-none transition"
+                  className="w-full rounded-2xl bg-white/70 dark:bg-white/5 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none p-4 text-base resize-none transition"
                 />
 
                 {/* Desktop translate button — on mobile the sticky bottom bar owns this action */}
@@ -604,7 +604,7 @@ function LoginCard({ onGoogleLogin, loading }: { onGoogleLogin: () => void; load
   );
 
   return (
-    <div className="max-w-md mx-auto mt-10 sm:mt-16 glass rounded-3xl shadow-soft border border-white/50 p-8">
+    <div className="max-w-md mx-auto mt-10 sm:mt-16 glass rounded-3xl shadow-soft border border-white/50 dark:border-white/10 p-8">
       <div className="text-center mb-6">
         <img
           src="/favicon1.ico"
@@ -625,7 +625,7 @@ function LoginCard({ onGoogleLogin, loading }: { onGoogleLogin: () => void; load
         disabled={loading}
         size="lg"
         variant="outline"
-        className="w-full bg-white text-foreground hover:bg-white/90 border border-border shadow-soft font-bold"
+        className="w-full bg-white text-neutral-900 hover:bg-white/90 border border-border shadow-soft font-bold"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <GoogleIcon />}
         ເຂົ້າດ້ວຍ Google

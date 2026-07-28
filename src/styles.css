@@ -108,6 +108,14 @@
   --border: oklch(1 0 0 / 0.12);
   --input: oklch(1 0 0 / 0.15);
   --ring: oklch(0.7 0.24 340);
+  /* Dark, slightly translucent card so .glass panels read on a dark background
+     instead of the default near-white gradient. */
+  --gradient-card: linear-gradient(
+    135deg,
+    oklch(0.26 0.05 285 / 0.9) 0%,
+    oklch(0.22 0.05 290 / 0.85) 100%
+  );
+  --shadow-soft: 0 8px 24px -8px oklch(0 0 0 / 0.5);
 }
 
 @layer base {

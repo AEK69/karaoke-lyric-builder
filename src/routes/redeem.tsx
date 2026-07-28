@@ -100,7 +100,7 @@ function RedeemPage() {
       </header>
       <main className="max-w-md mx-auto px-4 sm:px-6 pb-12">
         {!checking && !session ? (
-          <div className="glass rounded-3xl shadow-soft border border-white/40 p-6 text-center">
+          <div className="glass rounded-3xl shadow-soft border border-white/40 dark:border-white/10 p-6 text-center">
             <LogIn className="w-10 h-10 mx-auto text-primary mb-3" />
             <p className="font-bold mb-1">ຕ້ອງເຂົ້າສູ່ລະບົບກ່ອນ</p>
             <p className="text-sm text-muted-foreground mb-4">
@@ -115,7 +115,7 @@ function RedeemPage() {
             </Button>
           </div>
         ) : (
-          <div className="glass rounded-3xl shadow-soft border border-white/40 p-6">
+          <div className="glass rounded-3xl shadow-soft border border-white/40 dark:border-white/10 p-6">
             <p className="text-sm text-muted-foreground mb-4 text-center">
               ປ້ອນໂຄດ 12 ຕົວທີ່ໄດ້ຮັບຈາກແອັດມິນ
             </p>

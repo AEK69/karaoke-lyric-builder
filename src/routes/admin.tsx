@@ -429,7 +429,7 @@ function AdminPage() {
         {tab === "stats" && <StatsPanel stats={stats} topWords={topWords} />}
 
         {tab === "audit" && (
-          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40 dark:border-white/10">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-extrabold">ບັນທຶກການດຳເນີນງານ (Audit Log)</div>
               <button
@@ -441,7 +441,10 @@ function AdminPage() {
             </div>
             <div className="space-y-2">
               {audit.map((a) => (
-                <div key={a.id} className="rounded-xl border border-border bg-white/50 p-3 text-xs">
+                <div
+                  key={a.id}
+                  className="rounded-xl border border-border bg-white/50 dark:bg-white/5 p-3 text-xs"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
                       {a.action}
@@ -469,7 +472,7 @@ function AdminPage() {
         )}
 
         {tab === "words" && (
-          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40 dark:border-white/10">
             <div className="flex gap-1 mb-3 text-xs flex-wrap">
               {(["pending", "approved", "rejected", "all"] as WordFilter[]).map((f) => (
                 <FilterPill
@@ -494,7 +497,7 @@ function AdminPage() {
               {words.map((w) => (
                 <div
                   key={w.id}
-                  className="border border-border rounded-2xl p-3 bg-white/40 flex justify-between items-start gap-3 flex-wrap"
+                  className="border border-border rounded-2xl p-3 bg-white/40 dark:bg-white/5 flex justify-between items-start gap-3 flex-wrap"
                 >
                   <div className="min-w-[200px]">
                     <div className="font-bold">
@@ -535,7 +538,7 @@ function AdminPage() {
         )}
 
         {tab === "users" && (
-          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40 dark:border-white/10">
             <div className="flex gap-2 mb-3 flex-wrap">
               <div className="flex-1 relative min-w-[200px]">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -586,7 +589,7 @@ function AdminPage() {
         )}
 
         {tab === "payments" && (
-          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40 dark:border-white/10">
             <div className="flex gap-1 mb-3 text-xs flex-wrap">
               {(["pending", "approved", "rejected", "all"] as PaymentFilter[]).map((f) => (
                 <FilterPill
@@ -609,7 +612,10 @@ function AdminPage() {
             </div>
             <div className="space-y-2 max-h-[70vh] overflow-y-auto">
               {payments.map((p) => (
-                <div key={p.id} className="border border-border rounded-2xl p-3 bg-white/40">
+                <div
+                  key={p.id}
+                  className="border border-border rounded-2xl p-3 bg-white/40 dark:bg-white/5"
+                >
                   <div className="flex justify-between items-start flex-wrap gap-2">
                     <div className="flex-1 min-w-[200px]">
                       <div className="font-bold text-sm">{p.full_name ?? p.email}</div>
@@ -665,7 +671,7 @@ function AdminPage() {
         )}
 
         {tab === "codes" && (
-          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+          <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40 dark:border-white/10">
             <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
               <div className="flex gap-1 text-xs flex-wrap">
                 {(["all", "unused", "used", "expired"] as CodeFilter[]).map((f) => (
@@ -769,7 +775,7 @@ function UserRow({
   const [credit, setCredit] = useState(20);
   const active = u.is_premium && (!u.premium_until || new Date(u.premium_until) > new Date());
   return (
-    <div className="border border-border rounded-2xl p-3 bg-white/40">
+    <div className="border border-border rounded-2xl p-3 bg-white/40 dark:bg-white/5">
       <div className="flex items-start gap-3 flex-wrap">
         {u.avatar_url ? (
           <img src={u.avatar_url} className="w-10 h-10 rounded-full" alt="" />
@@ -865,7 +871,7 @@ function CodeRow({ c, onDelete }: { c: TopupCode; onDelete: (id: string) => void
   }
   return (
     <div
-      className={`border rounded-2xl p-3 flex items-center gap-3 ${usedUp || expired ? "opacity-50 border-border" : "border-primary/30 bg-white/40"}`}
+      className={`border rounded-2xl p-3 flex items-center gap-3 ${usedUp || expired ? "opacity-50 border-border" : "border-primary/30 bg-white/40 dark:bg-white/5"}`}
     >
       <Ticket className="w-5 h-5 text-primary shrink-0" />
       <div className="flex-1">
@@ -1011,7 +1017,7 @@ function StatCard({
   tone: string;
 }) {
   return (
-    <div className="glass rounded-2xl p-4 border border-white/40 shadow-soft">
+    <div className="glass rounded-2xl p-4 border border-white/40 dark:border-white/10 shadow-soft">
       <div className={`inline-flex items-center justify-center w-8 h-8 rounded-xl mb-2 ${tone}`}>
         {icon}
       </div>
@@ -1040,7 +1046,7 @@ function StatsPanel({
   return (
     <div className="space-y-4">
       {topWords.length > 0 && (
-        <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40">
+        <div className="glass rounded-3xl p-4 sm:p-6 shadow-soft border border-white/40 dark:border-white/10">
           <div className="text-sm font-extrabold mb-3">ຄຳຍອດນິຍົມ 14 ມື້</div>
           <div className="flex flex-wrap gap-2">
             {topWords.map((w) => (
@@ -1106,7 +1112,7 @@ function StatsPanel({
         />
       </div>
 
-      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 shadow-soft">
+      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 dark:border-white/10 shadow-soft">
         <div className="text-sm font-extrabold mb-3">ການແປ 14 ມື້ຫຼ້າສຸດ</div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -1140,7 +1146,7 @@ function StatsPanel({
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 shadow-soft">
+      <div className="glass rounded-3xl p-4 sm:p-6 border border-white/40 dark:border-white/10 shadow-soft">
         <div className="text-sm font-extrabold mb-3">ຜູ້ໃຊ້ໃໝ່ ແລະ ຄຳສັບໃໝ່</div>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">

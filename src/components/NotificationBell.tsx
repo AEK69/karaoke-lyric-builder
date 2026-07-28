@@ -81,7 +81,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={close} />
-          <div className="absolute right-0 mt-2 w-[19rem] sm:w-80 max-h-96 overflow-y-auto z-50 glass rounded-2xl border border-white/50 shadow-soft p-2">
+          <div className="absolute right-0 mt-2 w-[19rem] sm:w-80 max-h-96 overflow-y-auto z-50 glass rounded-2xl border border-white/50 dark:border-white/10 shadow-soft p-2">
             <div className="px-2 py-1 text-xs font-extrabold text-muted-foreground">
               ການແຈ້ງເຕືອນ
             </div>
@@ -102,7 +102,7 @@ export function NotificationBell({ userId }: { userId: string }) {
                   className={`rounded-xl p-2.5 mb-1 border ${
                     isNew
                       ? "bg-primary/5 border-primary/30 ring-1 ring-primary/20"
-                      : "bg-white/50 border-border"
+                      : "bg-white/50 dark:bg-white/5 border-border"
                   }`}
                 >
                   <div className="flex items-start gap-2">

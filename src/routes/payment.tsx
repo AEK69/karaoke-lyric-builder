@@ -162,7 +162,7 @@ function PaymentPage() {
           </div>
         )}
 
-        <div className="glass rounded-3xl p-5 border border-white/40 shadow-soft">
+        <div className="glass rounded-3xl p-5 border border-white/40 dark:border-white/10 shadow-soft">
           <h2 className="font-extrabold mb-3">1. ເລືອກແພັກເກດ</h2>
           <div className="grid grid-cols-2 gap-2">
             {PLANS.map((p) => (
@@ -186,7 +186,7 @@ function PaymentPage() {
           </div>
         </div>
 
-        <div className="glass rounded-3xl p-5 border border-white/40 shadow-soft text-center">
+        <div className="glass rounded-3xl p-5 border border-white/40 dark:border-white/10 shadow-soft text-center">
           <h2 className="font-extrabold mb-3 flex items-center justify-center gap-1">
             <QrCode className="w-4 h-4" /> 2. ສະແກນຈ່າຍ {plan.price.toLocaleString()} ກີບ
           </h2>
@@ -198,7 +198,7 @@ function PaymentPage() {
           <div className="text-xs text-muted-foreground mt-2">AKAPHON XAYYABED · OnePay</div>
         </div>
 
-        <div className="glass rounded-3xl p-5 border border-white/40 shadow-soft">
+        <div className="glass rounded-3xl p-5 border border-white/40 dark:border-white/10 shadow-soft">
           <h2 className="font-extrabold mb-3">3. ແນບສະລິບການໂອນ (ໃນເຄື່ອງ)</h2>
           <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-2xl p-6 cursor-pointer hover:border-primary/50 transition">
             <input type="file" accept="image/*" onChange={onPickSlip} className="hidden" />
@@ -252,13 +252,13 @@ function PaymentPage() {
         )}
 
         {myRequests.length > 0 && (
-          <div className="glass rounded-3xl p-5 border border-white/40 shadow-soft">
+          <div className="glass rounded-3xl p-5 border border-white/40 dark:border-white/10 shadow-soft">
             <h2 className="font-extrabold mb-3">ປະຫວັດຄຳຂໍຂອງທ່ານ</h2>
             <div className="space-y-2">
               {myRequests.map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-white/40 p-3"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-white/40 dark:bg-white/5 p-3"
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-bold truncate">{r.plan_label}</div>
