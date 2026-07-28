@@ -24,6 +24,9 @@ interface AdminUser {
   premium_until: string | null;
   extra_credits: number;
   created_at: string;
+  used_today: number;
+  free_remaining: number;
+  total_translations: number;
 }
 
 interface TopupCode {
@@ -265,16 +268,17 @@ function AdminPage() {
   return (
     <div className="min-h-screen">
       <Toaster richColors position="top-center" />
-      <header className="px-4 sm:px-6 pt-6 pb-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-70"><ArrowLeft className="w-4 h-4" /> ກັບ</Link>
-          <h1 className="text-xl font-extrabold">Admin Console</h1>
-          <div className="w-16" />
+      <header className="sticky top-0 z-30 px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 bg-background/80 backdrop-blur-xl border-b border-border/40">
+        <div className="max-w-6xl mx-auto grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+          <Link to="/" className="inline-flex items-center gap-1 text-sm font-bold active:opacity-60"><ArrowLeft className="w-4 h-4" /> ກັບ</Link>
+          <h1 className="text-base sm:text-xl font-extrabold text-center truncate">Admin Console</h1>
+          <div className="w-8" />
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
-        <div className="inline-flex bg-muted rounded-full p-1 flex-wrap">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 my-3 overflow-x-auto no-scrollbar">
+        <div className="inline-flex bg-muted rounded-full p-1 whitespace-nowrap">
+
           <TabBtn active={tab === "stats"} onClick={() => { setTab("stats"); void loadStats(); }}>
             <BarChart3 className="w-3 h-3 inline mr-1" /> ສະຖິຕິ
           </TabBtn>
@@ -467,7 +471,21 @@ function UserRow({ u, onGrant, onRevoke, onAdd, onReset }: { u: AdminUser; onGra
           <div className="flex gap-2 mt-1 text-xs flex-wrap">
             {active && <span className="px-2 py-0.5 rounded-full bg-gradient-premium text-premium-foreground font-bold">PREMIUM{u.premium_until ? ` · ${new Date(u.premium_until).toLocaleDateString()}` : ""}</span>}
             <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent font-bold">{u.extra_credits} ເຄຣດິດ</span>
+            <span
+              title="ການໃຊ້ງານຟຣີມື້ນີ້"
+              className={`px-2 py-0.5 rounded-full font-bold ${u.free_remaining === 0 && !active ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}
+            >
+              ມື້ນີ້ {u.used_today}/15 · ເຫຼືອຟຣີ {u.free_remaining < 0 ? "∞" : u.free_remaining}
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-bold" title="ແປທັງໝົດຕະຫຼອດ">
+              ລວມ {Number(u.total_translations).toLocaleString()} ຄັ້ງ
+            </span>
           </div>
+          {!active && (
+            <div className="mt-1.5 h-1.5 w-full max-w-[220px] rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-button" style={{ width: `${Math.min(100, (u.used_today / 15) * 100)}%` }} />
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-1">
           <Button size="sm" variant="outline" onClick={() => onGrant(u.id, 30)}><Crown className="w-3 h-3 mr-1" /> +30ມື້</Button>

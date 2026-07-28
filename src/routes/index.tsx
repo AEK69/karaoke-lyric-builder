@@ -175,7 +175,7 @@ function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Toaster richColors position="top-center" />
-      <header className="px-4 sm:px-6 pt-6 pb-2">
+      <header className="sticky top-0 z-30 px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 bg-background/75 backdrop-blur-xl border-b border-border/40">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img src="/favicon1.ico" alt="Lao Karaoke" className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl shadow-glow object-cover shrink-0" />
@@ -234,78 +234,86 @@ function Index() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 sm:px-6 pb-10">
+      <main className="flex-1 px-4 sm:px-6 pt-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-10">
         <div className="max-w-4xl mx-auto">
           {!session ? (
             <LoginCard onGoogleLogin={handleLogin} loading={signingIn} />
           ) : (
             <>
-              <div className="mb-4 flex items-center justify-between text-sm flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-primary" />
-                    {isPremium ? (
-                      <span className="inline-flex items-center gap-2">
-                        <span className="text-gradient font-bold">ໃຊ້ງານບໍ່ຈຳກັດ</span>
-                        {profile?.premium_until && <PremiumCountdown until={profile.premium_until} />}
-                      </span>
-                    ) : (
-                      <span>ເຫຼືອ <span className="font-bold text-primary">{remaining}</span> / {FREE_DAILY_LIMIT} ຄັ້ງ</span>
+              {/* Usage card — reads like a mobile app status tile */}
+              <div className="glass rounded-3xl border border-white/40 shadow-soft p-4 mb-4">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Zap className="w-4 h-4 text-primary shrink-0" />
+                      {isPremium ? (
+                        <span className="text-gradient font-extrabold truncate">ໃຊ້ງານບໍ່ຈຳກັດ</span>
+                      ) : (
+                        <span className="truncate">
+                          ເຫຼືອ <span className="font-extrabold text-primary">{remaining}</span>
+                          <span className="text-muted-foreground"> / {FREE_DAILY_LIMIT} ຄັ້ງມື້ນີ້</span>
+                        </span>
+                      )}
+                    </div>
+                    {!isPremium && (
+                      <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-button transition-all"
+                          style={{ width: `${Math.min(100, (used / FREE_DAILY_LIMIT) * 100)}%` }}
+                        />
+                      </div>
                     )}
                   </div>
-                  {credits > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent text-xs font-bold">
-                      +{credits} ເຄຣດິດ
-                    </span>
-                  )}
-                  {apiQuota && (
-                    <span title="ໂຄຕ້າ API ສາທາລະນະຕໍ່ມື້" className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-bold">
-                      API ເຫຼືອ {apiQuota.remaining}/{apiQuota.limit}
-                    </span>
-                  )}
-
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setShowSuggest(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition">
-                    <PlusCircle className="w-3.5 h-3.5" /> ເພີ່ມຄຳສັບ
-                  </button>
-                  <Link to="/api-docs" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs font-bold hover:bg-muted/70 transition">
-                    <Code2 className="w-3.5 h-3.5" /> API
-                  </Link>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {isPremium && profile?.premium_until && <PremiumCountdown until={profile.premium_until} />}
+                    {credits > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent text-xs font-bold">+{credits} ເຄຣດິດ</span>
+                    )}
+                    {apiQuota && (
+                      <span title="ໂຄຕ້າ API ສາທາລະນະຕໍ່ມື້" className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[11px] font-bold">
+                        API {apiQuota.remaining}/{apiQuota.limit}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-
               <div className="glass rounded-3xl shadow-soft border border-white/40 p-4 sm:p-6">
-                <div className="flex items-center justify-center gap-2 mb-4 text-sm font-bold">
-                  <button onClick={() => setDirection("lao-to-karaoke")} className={`px-4 py-2 rounded-full transition ${direction === "lao-to-karaoke" ? "bg-gradient-button text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>ລາວ</button>
-                  <button onClick={swap} className="w-9 h-9 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition" title="ສະຫຼັບ"><ArrowLeftRight className="w-4 h-4 text-primary" /></button>
-                  <button onClick={() => setDirection("karaoke-to-lao")} className={`px-4 py-2 rounded-full transition ${direction === "karaoke-to-lao" ? "bg-gradient-button text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>Karaoke</button>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 text-sm font-bold">
+                  <button onClick={() => setDirection("lao-to-karaoke")} className={`h-11 rounded-2xl transition ${direction === "lao-to-karaoke" ? "bg-gradient-button text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground active:scale-95"}`}>ລາວ</button>
+                  <button onClick={swap} className="w-11 h-11 rounded-2xl bg-primary/10 active:scale-90 flex items-center justify-center transition" title="ສະຫຼັບ"><ArrowLeftRight className="w-4 h-4 text-primary" /></button>
+                  <button onClick={() => setDirection("karaoke-to-lao")} className={`h-11 rounded-2xl transition ${direction === "karaoke-to-lao" ? "bg-gradient-button text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground active:scale-95"}`}>Karaoke</button>
                 </div>
 
-                <label className="block text-xs font-bold text-muted-foreground mb-1 ml-1">
-                  {direction === "lao-to-karaoke" ? "ພາສາລາວ" : "Karaoke"}
-                </label>
+                <div className="flex items-center justify-between mb-1 ml-1">
+                  <label className="block text-xs font-bold text-muted-foreground">
+                    {direction === "lao-to-karaoke" ? "ພາສາລາວ" : "Karaoke"}
+                  </label>
+                  {input && (
+                    <button onClick={() => { setInput(""); setOutput(""); }} className="text-xs font-semibold text-muted-foreground active:opacity-60">ລ້າງ</button>
+                  )}
+                </div>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") doTranslate(); }}
-                  placeholder={direction === "lao-to-karaoke" ? "ພິມຂໍ້ຄວາມພາສາລາວທີ່ນີ້... (Ctrl+Enter ເພື່ອແປ)" : "Type karaoke text here..."}
+                  placeholder={direction === "lao-to-karaoke" ? "ພິມຂໍ້ຄວາມພາສາລາວທີ່ນີ້..." : "Type karaoke text here..."}
                   rows={4}
                   className="w-full rounded-2xl bg-white/70 border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none p-4 text-base resize-none transition"
                 />
 
-                <div className="flex justify-center my-3">
-                  <Button onClick={doTranslate} disabled={busy || !input.trim()} className="bg-gradient-button text-primary-foreground hover:opacity-90 hover:scale-[1.02] shadow-glow font-bold px-8 rounded-full transition" size="lg">
+                {/* Desktop translate button — on mobile the sticky bottom bar owns this action */}
+                <div className="hidden sm:flex justify-center my-3">
+                  <Button onClick={doTranslate} disabled={busy || !input.trim()} className="bg-gradient-button text-primary-foreground hover:opacity-90 shadow-glow font-bold px-8 rounded-full transition" size="lg">
                     {busy ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
                     ແປພາສາ
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between mb-1 ml-1">
+                <div className="flex items-center justify-between mb-1 mt-3 sm:mt-0 ml-1">
                   <label className="text-xs font-bold text-muted-foreground">{direction === "lao-to-karaoke" ? "ຜົນ Karaoke" : "ຜົນພາສາລາວ"}</label>
                   {output && (
-                    <button onClick={copyOutput} className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+                    <button onClick={copyOutput} className="text-xs font-semibold text-primary flex items-center gap-1 active:opacity-60">
                       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       {copied ? "ສຳເນົາແລ້ວ" : "ສຳເນົາ"}
                     </button>
@@ -316,14 +324,55 @@ function Index() {
                 </div>
               </div>
 
+              {/* Secondary actions — chips on desktop, bottom bar handles mobile */}
+              <div className="hidden sm:flex items-center justify-center gap-2 mt-4">
+                <button onClick={() => setShowSuggest(true)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition">
+                  <PlusCircle className="w-3.5 h-3.5" /> ເພີ່ມຄຳສັບ
+                </button>
+                <Link to="/api-docs" className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted text-muted-foreground text-xs font-bold hover:bg-muted/70 transition">
+                  <Code2 className="w-3.5 h-3.5" /> API
+                </Link>
+              </div>
+
               <p className="text-center text-xs text-muted-foreground mt-6">© 2026 Lao Karaoke</p>
             </>
           )}
         </div>
       </main>
 
+      {/* Mobile app-style action bar */}
+      {session && (
+        <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-background/85 backdrop-blur-xl border-t border-border/50">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSuggest(true)}
+              className="w-12 h-12 shrink-0 rounded-2xl bg-primary/10 text-primary flex items-center justify-center active:scale-90 transition"
+              title="ເພີ່ມຄຳສັບ"
+            >
+              <PlusCircle className="w-5 h-5" />
+            </button>
+            <Button
+              onClick={doTranslate}
+              disabled={busy || !input.trim()}
+              className="flex-1 h-12 rounded-2xl bg-gradient-button text-primary-foreground font-extrabold text-base shadow-glow active:scale-[0.98] transition"
+            >
+              {busy ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+              ແປພາສາ
+            </Button>
+            <Link
+              to="/api-docs"
+              className="w-12 h-12 shrink-0 rounded-2xl bg-muted text-muted-foreground flex items-center justify-center active:scale-90 transition"
+              title="API"
+            >
+              <Code2 className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
       <SuggestWordDialog open={showSuggest} onClose={() => setShowSuggest(false)} />
     </div>
+
 
   );
 }

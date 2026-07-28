@@ -10,11 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 const ERRORS: Record<string, string> = {
   duplicate: "ຄຳສັບນີ້ມີຢູ່ແລ້ວ ຫຼື ກຳລັງລໍຖ້າອະນຸມັດ",
-  invalid_input: "ຂໍ້ມູນບໍ່ຖືກຕ້ອງ",
-  not_lao: "ຊ່ອງພາສາລາວຕ້ອງເປັນຕົວອັກສອນລາວ",
-  invalid_karaoke: "Karaoke ຕ້ອງເປັນ a-z ເທົ່ານັ້ນ",
+  invalid_input: "ຂໍ້ມູນບໍ່ຖືກຕ້ອງ (1-100 ຕົວອັກສອນ)",
+  not_lao: "ຊ່ອງພາສາລາວຕ້ອງມີຕົວອັກສອນລາວ",
+  invalid_karaoke: "Karaoke ໃຊ້ໄດ້ສະເພາະ a-z, 0-9, ຍະຫວ່າງ, ' ແລະ -",
   rate_limited: "ສົ່ງໄດ້ສູງສຸດ 20 ຄຳ/ວັນ",
+  not_authenticated: "ກະລຸນາ Login ກ່ອນ",
 };
+
+const LAO_RE = /[\u0E80-\u0EFF]/;
+const KARAOKE_RE = /^[a-z0-9 '-]+$/;
 
 export function SuggestWordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [lao, setLao] = useState("");
@@ -26,7 +30,13 @@ export function SuggestWordDialog({ open, onClose }: { open: boolean; onClose: (
     const l = lao.trim();
     const k = karaoke.trim().toLowerCase();
     if (!l || !k) return toast.error("ກະລຸນາຕື່ມທັງສອງຊ່ອງ");
+    if (!LAO_RE.test(l)) return toast.error(ERRORS.not_lao);
+    if (!KARAOKE_RE.test(k)) return toast.error(ERRORS.invalid_karaoke);
     if (hasWord(l)) return toast.error("ຄຳສັບນີ້ມີໃນລະບົບແລ້ວ — ເພີ່ມບໍ່ໄດ້");
+
+    const { data: s } = await supabase.auth.getSession();
+    if (!s.session) return toast.error(ERRORS.not_authenticated);
+
     setBusy(true);
     const { data, error } = await supabase.rpc("submit_word_suggestion", {
       p_lao: l,
@@ -34,7 +44,7 @@ export function SuggestWordDialog({ open, onClose }: { open: boolean; onClose: (
       p_note: note.trim() || undefined,
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error("ສົ່ງບໍ່ສຳເລັດ", { description: error.message });
     const r = data as { ok: boolean; error?: string };
     if (!r.ok) return toast.error(ERRORS[r.error ?? ""] ?? r.error ?? "ຜິດພາດ");
     toast.success("ສົ່ງແລ້ວ! ຖ້າແອັດມິນອະນຸມັດ ທ່ານຈະໄດ້ Premium ຟຣີ 1 ມື້");
