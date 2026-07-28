@@ -175,7 +175,7 @@ function Index() {
   return (
     <div className="min-h-screen flex flex-col">
       <Toaster richColors position="top-center" />
-      <header className="px-4 sm:px-6 pt-6 pb-2">
+      <header className="sticky top-0 z-30 px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 bg-background/75 backdrop-blur-xl border-b border-border/40">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img src="/favicon1.ico" alt="Lao Karaoke" className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl shadow-glow object-cover shrink-0" />
