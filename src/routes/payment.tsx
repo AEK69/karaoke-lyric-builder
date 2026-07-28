@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
-import { ArrowLeft, QrCode, MessageCircle, Upload, Loader2, Crown, Check } from "lucide-react";
+import { useCallback, useMemo, useState, useEffect } from "react";
+import {
+  ArrowLeft,
+  QrCode,
+  MessageCircle,
+  Upload,
+  Loader2,
+  Crown,
+  Check,
+  Clock,
+  X,
+  Copy,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -27,6 +38,15 @@ const PLANS: Plan[] = [
   { label: "Premium 1 ປີ", price: 300000, days: 365 },
 ];
 
+interface PaymentReq {
+  id: string;
+  plan_label: string;
+  amount: number;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
 function PaymentPage() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
@@ -35,8 +55,19 @@ function PaymentPage() {
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [myRequests, setMyRequests] = useState<PaymentReq[]>([]);
 
   const qr = useMemo(() => generateOnePayDynamicQR(plan.price), [plan]);
+
+  const loadRequests = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("payment_requests")
+      .select("id, plan_label, amount, status, admin_note, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (data) setMyRequests(data as PaymentReq[]);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -48,8 +79,11 @@ function PaymentPage() {
         .eq("id", data.session.user.id)
         .maybeSingle();
       setUserName((p as { full_name: string | null } | null)?.full_name ?? "");
+      void loadRequests(data.session.user.id);
     });
-  }, []);
+  }, [loadRequests]);
+
+  const pendingCount = myRequests.filter((r) => r.status === "pending").length;
 
   function onPickSlip(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
@@ -79,6 +113,7 @@ function PaymentPage() {
         .single();
       if (error) throw error;
       setRequestId((data as { id: string }).id);
+      void loadRequests(s.session.user.id);
       toast.success("ບັນທຶກຄຳຂໍແລ້ວ — ກະລຸນາສົ່ງສະລິບໃຫ້ແອັດມິນຜ່ານ WhatsApp");
       // Open WhatsApp with details
       const msg = encodeURIComponent(
@@ -115,6 +150,18 @@ function PaymentPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 pb-12 space-y-4">
+        {pendingCount > 0 && (
+          <div className="rounded-2xl bg-premium/10 border-2 border-premium/30 p-4 flex items-start gap-3">
+            <Clock className="w-5 h-5 text-premium shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <div className="font-bold">ທ່ານມີ {pendingCount} ຄຳຂໍທີ່ກຳລັງລໍຖ້າກວດສອບ</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                ແອັດມິນຈະອະນຸມັດ ແລະ ເຕີມໃຫ້ພາຍໃນ 24 ຊົ່ວໂມງ — ບໍ່ຈຳເປັນຕ້ອງສົ່ງຊ້ຳ
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="glass rounded-3xl p-5 border border-white/40 shadow-soft">
           <h2 className="font-extrabold mb-3">1. ເລືອກແພັກເກດ</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -122,8 +169,14 @@ function PaymentPage() {
               <button
                 key={p.label}
                 onClick={() => setPlan(p)}
-                className={`text-left p-3 rounded-xl border-2 transition ${plan.label === p.label ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+                aria-pressed={plan.label === p.label}
+                className={`relative text-left p-3 rounded-xl border-2 transition ${plan.label === p.label ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
               >
+                {plan.label === p.label && (
+                  <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <Check className="w-3 h-3" />
+                  </span>
+                )}
                 <div className="text-xs font-bold">{p.label}</div>
                 <div className="text-sm font-extrabold text-primary">
                   {p.price.toLocaleString()} ກີບ
@@ -178,15 +231,82 @@ function PaymentPage() {
         {requestId && (
           <div className="rounded-2xl bg-success/10 border-2 border-success/30 p-4 text-center">
             <Check className="w-8 h-8 mx-auto text-success mb-1" />
-            <div className="font-bold text-sm">
-              ບັນທຶກຄຳຂໍແລ້ວ — Ref: <span className="font-mono">{requestId.slice(0, 8)}</span>
+            <div className="font-bold text-sm flex items-center justify-center gap-2 flex-wrap">
+              <span>
+                ບັນທຶກຄຳຂໍແລ້ວ — Ref: <span className="font-mono">{requestId.slice(0, 8)}</span>
+              </span>
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(requestId);
+                  toast.success("ສຳເນົາ Ref ແລ້ວ");
+                }}
+                className="inline-flex items-center gap-1 text-xs text-primary font-bold active:opacity-60"
+              >
+                <Copy className="w-3 h-3" /> ສຳເນົາ
+              </button>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               ແອັດມິນຈະອະນຸມັດ ແລະ ເຕີມເຄຣດິດ/Premium ໃຫ້ໃນ 24 ຊມ
             </div>
           </div>
         )}
+
+        {myRequests.length > 0 && (
+          <div className="glass rounded-3xl p-5 border border-white/40 shadow-soft">
+            <h2 className="font-extrabold mb-3">ປະຫວັດຄຳຂໍຂອງທ່ານ</h2>
+            <div className="space-y-2">
+              {myRequests.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-white/40 p-3"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold truncate">{r.plan_label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {r.amount.toLocaleString()} ກີບ ·{" "}
+                      {new Date(r.created_at).toLocaleDateString()}
+                      {r.admin_note ? ` · “${r.admin_note}”` : ""}
+                    </div>
+                  </div>
+                  <PaymentStatusBadge status={r.status} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+    pending: {
+      label: "ລໍຖ້າກວດສອບ",
+      cls: "bg-yellow-100 text-yellow-800",
+      icon: <Clock className="w-3 h-3" />,
+    },
+    approved: {
+      label: "ອະນຸມັດແລ້ວ",
+      cls: "bg-green-100 text-green-800",
+      icon: <Check className="w-3 h-3" />,
+    },
+    rejected: {
+      label: "ປະຕິເສດ",
+      cls: "bg-red-100 text-red-800",
+      icon: <X className="w-3 h-3" />,
+    },
+  };
+  const s = map[status] ?? {
+    label: status,
+    cls: "bg-muted text-muted-foreground",
+    icon: null,
+  };
+  return (
+    <span
+      className={`inline-flex items-center gap-1 shrink-0 px-2 py-1 rounded-full text-xs font-bold ${s.cls}`}
+    >
+      {s.icon} {s.label}
+    </span>
   );
 }

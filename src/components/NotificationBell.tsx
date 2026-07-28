@@ -22,6 +22,9 @@ function fmt(value: unknown): string | null {
 export function NotificationBell({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationRow[]>([]);
+  // Rows that were unread when the panel was opened — kept highlighted for this
+  // viewing so the user can spot what's new even after they're marked read.
+  const [highlightIds, setHighlightIds] = useState<string[]>([]);
 
   async function load() {
     const { data } = await supabase
@@ -44,12 +47,20 @@ export function NotificationBell({ userId }: { userId: string }) {
   async function toggle() {
     const next = !open;
     setOpen(next);
-    if (next && unread > 0) {
-      await supabase.rpc("mark_notifications_read");
-      setItems((prev) =>
-        prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })),
-      );
+    if (next) {
+      setHighlightIds(items.filter((n) => !n.read_at).map((n) => n.id));
+      if (unread > 0) {
+        await supabase.rpc("mark_notifications_read");
+        setItems((prev) =>
+          prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })),
+        );
+      }
     }
+  }
+
+  function close() {
+    setOpen(false);
+    setHighlightIds([]);
   }
 
   return (
@@ -62,14 +73,14 @@ export function NotificationBell({ userId }: { userId: string }) {
         <Bell className="w-4 h-4" />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-            {unread}
+            {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-40" onClick={close} />
           <div className="absolute right-0 mt-2 w-[19rem] sm:w-80 max-h-96 overflow-y-auto z-50 glass rounded-2xl border border-white/50 shadow-soft p-2">
             <div className="px-2 py-1 text-xs font-extrabold text-muted-foreground">
               ການແຈ້ງເຕືອນ
@@ -84,8 +95,16 @@ export function NotificationBell({ userId }: { userId: string }) {
               const from = fmt(meta.premium_from);
               const until = fmt(meta.premium_until);
               const approved = n.kind === "suggestion_approved";
+              const isNew = highlightIds.includes(n.id);
               return (
-                <div key={n.id} className="rounded-xl p-2.5 mb-1 bg-white/50 border border-border">
+                <div
+                  key={n.id}
+                  className={`rounded-xl p-2.5 mb-1 border ${
+                    isNew
+                      ? "bg-primary/5 border-primary/30 ring-1 ring-primary/20"
+                      : "bg-white/50 border-border"
+                  }`}
+                >
                   <div className="flex items-start gap-2">
                     <span
                       className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${

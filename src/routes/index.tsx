@@ -26,6 +26,7 @@ import { Toaster } from "@/components/ui/sonner";
 import type { Session } from "@supabase/supabase-js";
 
 const FREE_DAILY_LIMIT = 15;
+const INPUT_DRAFT_KEY = "kb:translate-input";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -65,6 +66,24 @@ function Index() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Restore any unsaved input after hydration (not during render — a value that
+  // differs from the server-rendered "" would trigger a hydration mismatch).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem(INPUT_DRAFT_KEY);
+    if (saved) setInput(saved);
+  }, []);
+
+  // Autosave the input so a reload or accidental navigation doesn't lose lyrics.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const t = setTimeout(() => {
+      if (input.trim()) localStorage.setItem(INPUT_DRAFT_KEY, input);
+      else localStorage.removeItem(INPUT_DRAFT_KEY);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [input]);
 
   // Approved community words extend the built-in dictionary.
   useEffect(() => {
@@ -154,6 +173,7 @@ function Index() {
     await supabase.auth.signOut();
     setOutput("");
     setInput("");
+    if (typeof window !== "undefined") localStorage.removeItem(INPUT_DRAFT_KEY);
   }
 
   function swap() {
@@ -366,7 +386,10 @@ function Index() {
               <div className="glass rounded-3xl shadow-soft border border-white/40 p-4 sm:p-6">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 mb-4 text-sm font-bold">
                   <button
-                    onClick={() => setDirection("lao-to-karaoke")}
+                    onClick={() => {
+                      setDirection("lao-to-karaoke");
+                      setOutput("");
+                    }}
                     className={`h-11 rounded-2xl transition ${direction === "lao-to-karaoke" ? "bg-gradient-button text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground active:scale-95"}`}
                   >
                     ລາວ
@@ -379,7 +402,10 @@ function Index() {
                     <ArrowLeftRight className="w-4 h-4 text-primary" />
                   </button>
                   <button
-                    onClick={() => setDirection("karaoke-to-lao")}
+                    onClick={() => {
+                      setDirection("karaoke-to-lao");
+                      setOutput("");
+                    }}
                     className={`h-11 rounded-2xl transition ${direction === "karaoke-to-lao" ? "bg-gradient-button text-primary-foreground shadow-glow" : "bg-muted text-muted-foreground active:scale-95"}`}
                   >
                     Karaoke
@@ -390,17 +416,24 @@ function Index() {
                   <label className="block text-xs font-bold text-muted-foreground">
                     {direction === "lao-to-karaoke" ? "ພາສາລາວ" : "Karaoke"}
                   </label>
-                  {input && (
-                    <button
-                      onClick={() => {
-                        setInput("");
-                        setOutput("");
-                      }}
-                      className="text-xs font-semibold text-muted-foreground active:opacity-60"
-                    >
-                      ລ້າງ
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {input && (
+                      <span className="text-[11px] tabular-nums text-muted-foreground/70">
+                        {input.length} ຕົວອັກສອນ
+                      </span>
+                    )}
+                    {input && (
+                      <button
+                        onClick={() => {
+                          setInput("");
+                          setOutput("");
+                        }}
+                        className="text-xs font-semibold text-muted-foreground active:opacity-60"
+                      >
+                        ລ້າງ
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <textarea
                   value={input}
