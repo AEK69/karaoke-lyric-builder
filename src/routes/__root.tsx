@@ -88,6 +88,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Karaoke Translator provides real-time song lyric translation for karaoke enthusiasts.",
       },
       { name: "author", content: "Lovable" },
+      // Installable-app / mobile chrome. theme-color tints the status bar; the
+      // manifest's dark background_color makes the logo read as an app cover on
+      // the standalone splash, distinguishing the installed app from the website.
+      { name: "theme-color", content: "#d6318a" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Lao Karaoke" },
       { property: "og:title", content: "Lao Karaoke" },
       {
         property: "og:description",
@@ -120,7 +128,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon1.ico", sizes: "any" },
-      { rel: "apple-touch-icon", href: "/favicon1.ico" },
+      { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
