@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { createPublicClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
+import { createTrustedRpcClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/public/stats")({
         const days = clampInt(url.searchParams.get("days"), 14, 1, 90);
         const limit = clampInt(url.searchParams.get("limit"), 50, 1, 200);
 
-        const client = createPublicClient();
+        const client = await createTrustedRpcClient();
         if (!client) return json({ ok: false, error: "unavailable" }, 503);
 
         const [top, series, quota] = await Promise.all([

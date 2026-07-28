@@ -19,6 +19,21 @@ export function createPublicClient() {
   });
 }
 
+/**
+ * Trusted server-side client used ONLY to call the rate-limit / public stats RPCs.
+ * These RPCs are no longer executable by the anonymous role, so the public API
+ * routes invoke them from the server after validating and clamping all inputs.
+ * Never expose this client or its results beyond the whitelisted RPCs below.
+ */
+export async function createTrustedRpcClient() {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return supabaseAdmin;
+  } catch {
+    return null;
+  }
+}
+
 /** Stable, non-reversible per-caller key derived from the request IP. */
 export async function clientKeyFromRequest(request: Request): Promise<string> {
   const ip =
