@@ -46,17 +46,30 @@ function json(payload: unknown, status = 200, extraHeaders: Record<string, strin
   });
 }
 
-interface Quota { allowed: boolean; limit: number; used: number; remaining: number }
+interface Quota {
+  allowed: boolean;
+  limit: number;
+  used: number;
+  remaining: number;
+}
 
 async function handle(request: Request, text: unknown, direction: unknown) {
   const parsed = bodySchema.safeParse({ text, direction: direction ?? "lao-to-karaoke" });
   if (!parsed.success) {
-    return json({ ok: false, error: "invalid_input", detail: parsed.error.issues[0]?.message }, 400);
+    return json(
+      { ok: false, error: "invalid_input", detail: parsed.error.issues[0]?.message },
+      400,
+    );
   }
 
   const client = createPublicClient();
   const rpc = await createTrustedRpcClient();
-  let quota: Quota = { allowed: true, limit: PUBLIC_API_DAILY_LIMIT, used: 0, remaining: PUBLIC_API_DAILY_LIMIT };
+  let quota: Quota = {
+    allowed: true,
+    limit: PUBLIC_API_DAILY_LIMIT,
+    used: 0,
+    remaining: PUBLIC_API_DAILY_LIMIT,
+  };
 
   if (rpc) {
     const key = await clientKeyFromRequest(request);
@@ -71,7 +84,11 @@ async function handle(request: Request, text: unknown, direction: unknown) {
 
   if (!quota.allowed) {
     return json(
-      { ok: false, error: "quota_exceeded", quota: { limit: quota.limit, used: quota.used, remaining: 0 } },
+      {
+        ok: false,
+        error: "quota_exceeded",
+        quota: { limit: quota.limit, used: quota.used, remaining: 0 },
+      },
       429,
       quotaHeaders,
     );
@@ -86,7 +103,6 @@ async function handle(request: Request, text: unknown, direction: unknown) {
     const words = extractKnownWords(parsed.data.text, dir);
     if (words.length) void rpc.rpc("record_word_usage", { p_words: words, p_direction: dir });
   }
-
 
   return json(
     {
@@ -107,7 +123,11 @@ export const Route = createFileRoute("/api/public/translate")({
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
       GET: async ({ request }) => {
         const url = new URL(request.url);
-        return handle(request, url.searchParams.get("text") ?? "", url.searchParams.get("direction") ?? undefined);
+        return handle(
+          request,
+          url.searchParams.get("text") ?? "",
+          url.searchParams.get("direction") ?? undefined,
+        );
       },
       POST: async ({ request }) => {
         let body: unknown;

@@ -76,7 +76,12 @@
   --ring: oklch(0.62 0.24 340);
 
   /* Gradients */
-  --gradient-hero: linear-gradient(135deg, oklch(0.65 0.25 340) 0%, oklch(0.6 0.23 280) 50%, oklch(0.65 0.22 220) 100%);
+  --gradient-hero: linear-gradient(
+    135deg,
+    oklch(0.65 0.25 340) 0%,
+    oklch(0.6 0.23 280) 50%,
+    oklch(0.65 0.22 220) 100%
+  );
   --gradient-card: linear-gradient(135deg, oklch(1 0 0 / 0.95) 0%, oklch(0.98 0.02 320 / 0.9) 100%);
   --gradient-premium: linear-gradient(135deg, oklch(0.85 0.18 75) 0%, oklch(0.7 0.2 35) 100%);
   --gradient-button: linear-gradient(135deg, oklch(0.65 0.25 340) 0%, oklch(0.6 0.24 290) 100%);
@@ -118,18 +123,33 @@
       radial-gradient(ellipse at bottom right, oklch(0.85 0.15 220 / 0.3), transparent 50%);
     background-attachment: fixed;
     min-height: 100vh;
-    font-family: 'Noto Sans Lao', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Noto Sans Lao",
+      "Plus Jakarta Sans",
+      system-ui,
+      -apple-system,
+      sans-serif;
     /* กัน double-tap zoom บนมือถือ (เสริมจาก viewport meta) */
     touch-action: manipulation;
   }
 }
 
 @layer utilities {
-  .bg-gradient-hero { background: var(--gradient-hero); }
-  .bg-gradient-premium { background: var(--gradient-premium); }
-  .bg-gradient-button { background: var(--gradient-button); }
-  .shadow-soft { box-shadow: var(--shadow-soft); }
-  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .bg-gradient-premium {
+    background: var(--gradient-premium);
+  }
+  .bg-gradient-button {
+    background: var(--gradient-button);
+  }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
   .glass {
     background: var(--gradient-card);
     backdrop-filter: blur(20px);

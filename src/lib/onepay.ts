@@ -2,7 +2,8 @@
 export const ONEPAY_STATIC_QR =
   "00020101021115312738041800520446mch19B73F61B9E038570016A00526628466257701082771041802030020314mch19B73F61B9E5204569153034185802LA5916AKAPHON XAYYABED6002VT62120208586625406304C735";
 
-export const ONEPAY_QR_IMAGE_BASE = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&ecc=H&data=";
+export const ONEPAY_QR_IMAGE_BASE =
+  "https://api.qrserver.com/v1/create-qr-code/?size=320x320&ecc=H&data=";
 
 function crc16ccitt(input: string): string {
   let crc = 0xffff;

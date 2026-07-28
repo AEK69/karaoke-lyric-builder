@@ -21,7 +21,9 @@ function Block({ title, code }: { title: string; code: string }) {
   return (
     <div className="mb-5">
       <div className="text-xs font-bold text-muted-foreground mb-1">{title}</div>
-      <pre className="rounded-2xl bg-foreground/90 text-background text-xs p-4 overflow-x-auto whitespace-pre">{code}</pre>
+      <pre className="rounded-2xl bg-foreground/90 text-background text-xs p-4 overflow-x-auto whitespace-pre">
+        {code}
+      </pre>
     </div>
   );
 }
@@ -31,8 +33,15 @@ function ApiDocs() {
     <div className="min-h-screen">
       <header className="px-4 sm:px-6 pt-6 pb-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-70"><ArrowLeft className="w-4 h-4" /> ກັບ</Link>
-          <h1 className="text-xl font-extrabold inline-flex items-center gap-2"><Code2 className="w-5 h-5 text-primary" /> API</h1>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-70"
+          >
+            <ArrowLeft className="w-4 h-4" /> ກັບ
+          </Link>
+          <h1 className="text-xl font-extrabold inline-flex items-center gap-2">
+            <Code2 className="w-5 h-5 text-primary" /> API
+          </h1>
           <div className="w-12" />
         </div>
       </header>
@@ -40,7 +49,8 @@ function ApiDocs() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
         <div className="glass rounded-3xl p-5 sm:p-7 border border-white/40 shadow-soft">
           <p className="text-sm text-muted-foreground mb-5">
-            ໃຊ້ໄດ້ຟຣີ, ບໍ່ຕ້ອງມີ API key, ຮອງຮັບ CORS ທຸກໂດເມນ. ຂໍ້ຄວາມສູງສຸດ 5,000 ຕົວອັກສອນຕໍ່ຄັ້ງ.
+            ໃຊ້ໄດ້ຟຣີ, ບໍ່ຕ້ອງມີ API key, ຮອງຮັບ CORS ທຸກໂດເມນ. ຂໍ້ຄວາມສູງສຸດ 5,000
+            ຕົວອັກສອນຕໍ່ຄັ້ງ.
           </p>
 
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-6 text-sm break-all">
@@ -49,8 +59,13 @@ function ApiDocs() {
 
           <h2 className="font-extrabold mb-2">ພາຣາມິເຕີ</h2>
           <ul className="text-sm mb-6 space-y-1">
-            <li><code className="font-mono font-bold">text</code> — ຂໍ້ຄວາມທີ່ຕ້ອງການແປ (ຈຳເປັນ)</li>
-            <li><code className="font-mono font-bold">direction</code> — <code>lao-to-karaoke</code> (ຄ່າເລີ່ມຕົ້ນ) ຫຼື <code>karaoke-to-lao</code></li>
+            <li>
+              <code className="font-mono font-bold">text</code> — ຂໍ້ຄວາມທີ່ຕ້ອງການແປ (ຈຳເປັນ)
+            </li>
+            <li>
+              <code className="font-mono font-bold">direction</code> — <code>lao-to-karaoke</code>{" "}
+              (ຄ່າເລີ່ມຕົ້ນ) ຫຼື <code>karaoke-to-lao</code>
+            </li>
           </ul>
 
           <Block title="GET" code={`curl "${BASE}?text=ສະບາຍດີ&direction=lao-to-karaoke"`} />
@@ -81,7 +96,8 @@ const { result } = await res.json();`}
 
           <h2 className="font-extrabold mb-2">ຂໍ້ຜິດພາດ</h2>
           <p className="text-sm text-muted-foreground">
-            <code>400</code> — <code>invalid_input</code> ຫຼື <code>invalid_json</code> (ຂໍ້ຄວາມຫວ່າງເປົ່າ ຫຼື ຍາວເກີນ 5,000 ຕົວອັກສອນ)
+            <code>400</code> — <code>invalid_input</code> ຫຼື <code>invalid_json</code>{" "}
+            (ຂໍ້ຄວາມຫວ່າງເປົ່າ ຫຼື ຍາວເກີນ 5,000 ຕົວອັກສອນ)
           </p>
         </div>
       </main>

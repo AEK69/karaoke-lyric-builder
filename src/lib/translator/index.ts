@@ -23,9 +23,9 @@ export function hasWord(lao: string): boolean {
   return Boolean(fullMap[lao.trim()]);
 }
 
-
 const seg =
-  typeof Intl !== "undefined" && (Intl as unknown as { Segmenter?: typeof Intl.Segmenter }).Segmenter
+  typeof Intl !== "undefined" &&
+  (Intl as unknown as { Segmenter?: typeof Intl.Segmenter }).Segmenter
     ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
     : null;
 
@@ -115,7 +115,10 @@ export function extractKnownWords(text: string, dir: Direction): string[] {
   const out: string[] = [];
   let i = 0;
   while (i < src.length && out.length < 200) {
-    if (/\s/.test(src[i])) { i++; continue; }
+    if (/\s/.test(src[i])) {
+      i++;
+      continue;
+    }
     let matched = false;
     for (const key of sortedKeys) {
       if (src.substr(i, key.length) === key) {
@@ -129,4 +132,3 @@ export function extractKnownWords(text: string, dir: Direction): string[] {
   }
   return out;
 }
-

@@ -36,5 +36,10 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Generated word dictionary — large data file, TS checking intentionally off.
+    files: ["src/lib/translator/dictionary.ts"],
+    rules: { "@typescript-eslint/ban-ts-comment": "off" },
+  },
   eslintPluginPrettier,
 );

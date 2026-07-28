@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Typecheck · Build
+    name: Lint · Typecheck · Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +17,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Lint
+        run: npm run lint
       - name: Typecheck
         run: npm run typecheck
       - name: Build
@@ -29,21 +31,6 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ci_dummy
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_PUBLISHABLE_KEY: ci_dummy_anon_key
-
-  lint:
-    name: Lint (informational)
-    runs-on: ubuntu-latest
-    # The Lovable-generated code isn't Prettier-formatted yet, so lint is not a
-    # blocking gate. Run `npm run format` once, then flip this to blocking.
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
 
   live-db-check:
     name: Live DB schema check (non-blocking)

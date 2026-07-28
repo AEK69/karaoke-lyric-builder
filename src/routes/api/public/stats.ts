@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { createTrustedRpcClient, clientKeyFromRequest, PUBLIC_API_DAILY_LIMIT } from "@/lib/public-api";
+import {
+  createTrustedRpcClient,
+  clientKeyFromRequest,
+  PUBLIC_API_DAILY_LIMIT,
+} from "@/lib/public-api";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +53,11 @@ export const Route = createFileRoute("/api/public/stats")({
         return json({
           ok: true,
           days,
-          top_words: (top.data ?? []).map((r) => ({ word: r.word, direction: r.direction, uses: Number(r.uses) })),
+          top_words: (top.data ?? []).map((r) => ({
+            word: r.word,
+            direction: r.direction,
+            uses: Number(r.uses),
+          })),
           series: (series.data ?? []).map((r) => ({ day: r.day, uses: Number(r.uses) })),
           quota: quota.data ?? null,
         });

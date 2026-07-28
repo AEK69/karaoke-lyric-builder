@@ -46,7 +46,9 @@ export function NotificationBell({ userId }: { userId: string }) {
     setOpen(next);
     if (next && unread > 0) {
       await supabase.rpc("mark_notifications_read");
-      setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
+      setItems((prev) =>
+        prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })),
+      );
     }
   }
 
@@ -69,9 +71,13 @@ export function NotificationBell({ userId }: { userId: string }) {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 mt-2 w-[19rem] sm:w-80 max-h-96 overflow-y-auto z-50 glass rounded-2xl border border-white/50 shadow-soft p-2">
-            <div className="px-2 py-1 text-xs font-extrabold text-muted-foreground">ການແຈ້ງເຕືອນ</div>
+            <div className="px-2 py-1 text-xs font-extrabold text-muted-foreground">
+              ການແຈ້ງເຕືອນ
+            </div>
             {items.length === 0 && (
-              <div className="text-center text-xs text-muted-foreground py-6">ຍັງບໍ່ມີການແຈ້ງເຕືອນ</div>
+              <div className="text-center text-xs text-muted-foreground py-6">
+                ຍັງບໍ່ມີການແຈ້ງເຕືອນ
+              </div>
             )}
             {items.map((n) => {
               const meta = (n.meta ?? {}) as Record<string, unknown>;
@@ -83,14 +89,18 @@ export function NotificationBell({ userId }: { userId: string }) {
                   <div className="flex items-start gap-2">
                     <span
                       className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                        approved ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+                        approved
+                          ? "bg-success/15 text-success"
+                          : "bg-destructive/15 text-destructive"
                       }`}
                     >
                       {approved ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                     </span>
                     <div className="min-w-0">
                       <div className="text-xs font-bold break-words">{n.title}</div>
-                      {n.body && <div className="text-xs text-muted-foreground break-words">{n.body}</div>}
+                      {n.body && (
+                        <div className="text-xs text-muted-foreground break-words">{n.body}</div>
+                      )}
                       {approved && (from || until) && (
                         <div className="mt-1 text-[11px] inline-flex items-start gap-1 text-premium font-semibold">
                           <Crown className="w-3 h-3 mt-0.5 shrink-0" />

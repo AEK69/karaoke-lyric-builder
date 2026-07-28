@@ -113,10 +113,7 @@ async function probeTable(t) {
 
 const rpcNames = Object.keys(RPCS);
 console.log(`Probing ${URL} — ${rpcNames.length} RPCs, ${TABLES.length} tables…`);
-await Promise.all([
-  ...rpcNames.map((fn) => probeRpc(fn, RPCS[fn])),
-  ...TABLES.map(probeTable),
-]);
+await Promise.all([...rpcNames.map((fn) => probeRpc(fn, RPCS[fn])), ...TABLES.map(probeTable)]);
 
 if (errors.length) {
   console.error("\n⚠ Network/probe errors (could not verify):");
@@ -126,7 +123,9 @@ if (errors.length) {
 if (missing.length) {
   console.error(`\n✗ ${missing.length} object(s) MISSING from live DB (unapplied migration?):`);
   for (const m of missing) console.error("  " + m);
-  console.error("\n→ Apply pending SQL in the Supabase SQL Editor (see supabase/APPLY_PENDING_ADMIN.sql).");
+  console.error(
+    "\n→ Apply pending SQL in the Supabase SQL Editor (see supabase/APPLY_PENDING_ADMIN.sql).",
+  );
   process.exit(1);
 }
 
