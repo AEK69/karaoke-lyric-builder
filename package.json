@@ -10,8 +10,11 @@
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "check:rpc": "node scripts/check-live-rpcs.mjs",
+    "deploy": "npm run build && firebase deploy --only hosting",
+    "postdeploy": "node scripts/check-live-rpcs.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
