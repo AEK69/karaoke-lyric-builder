@@ -268,16 +268,17 @@ function AdminPage() {
   return (
     <div className="min-h-screen">
       <Toaster richColors position="top-center" />
-      <header className="px-4 sm:px-6 pt-6 pb-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-70"><ArrowLeft className="w-4 h-4" /> ກັບ</Link>
-          <h1 className="text-xl font-extrabold">Admin Console</h1>
-          <div className="w-16" />
+      <header className="sticky top-0 z-30 px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 bg-background/80 backdrop-blur-xl border-b border-border/40">
+        <div className="max-w-6xl mx-auto grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+          <Link to="/" className="inline-flex items-center gap-1 text-sm font-bold active:opacity-60"><ArrowLeft className="w-4 h-4" /> ກັບ</Link>
+          <h1 className="text-base sm:text-xl font-extrabold text-center truncate">Admin Console</h1>
+          <div className="w-8" />
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 mb-4">
-        <div className="inline-flex bg-muted rounded-full p-1 flex-wrap">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 my-3 overflow-x-auto no-scrollbar">
+        <div className="inline-flex bg-muted rounded-full p-1 whitespace-nowrap">
+
           <TabBtn active={tab === "stats"} onClick={() => { setTab("stats"); void loadStats(); }}>
             <BarChart3 className="w-3 h-3 inline mr-1" /> ສະຖິຕິ
           </TabBtn>
