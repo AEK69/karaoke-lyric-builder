@@ -142,3 +142,12 @@
     color: transparent;
   }
 }
+
+/* Hide the scrollbar on horizontally scrollable mobile tab strips. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
