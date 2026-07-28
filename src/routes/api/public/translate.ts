@@ -50,11 +50,12 @@ async function handle(request: Request, text: unknown, direction: unknown) {
   }
 
   const client = createPublicClient();
+  const rpc = await createTrustedRpcClient();
   let quota: Quota = { allowed: true, limit: PUBLIC_API_DAILY_LIMIT, used: 0, remaining: PUBLIC_API_DAILY_LIMIT };
 
-  if (client) {
+  if (rpc) {
     const key = await clientKeyFromRequest(request);
-    const { data } = await client.rpc("api_consume", { p_key: key, p_limit: PUBLIC_API_DAILY_LIMIT });
+    const { data } = await rpc.rpc("api_consume", { p_key: key, p_limit: PUBLIC_API_DAILY_LIMIT });
     if (data) quota = data as unknown as Quota;
   }
 
@@ -76,10 +77,11 @@ async function handle(request: Request, text: unknown, direction: unknown) {
   const result = translate(parsed.data.text, dir);
 
   // Fire-and-forget usage stats for the popular-words endpoint.
-  if (client) {
+  if (rpc) {
     const words = extractKnownWords(parsed.data.text, dir);
-    if (words.length) void client.rpc("record_word_usage", { p_words: words, p_direction: dir });
+    if (words.length) void rpc.rpc("record_word_usage", { p_words: words, p_direction: dir });
   }
+
 
   return json(
     {
