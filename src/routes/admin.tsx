@@ -24,6 +24,9 @@ interface AdminUser {
   premium_until: string | null;
   extra_credits: number;
   created_at: string;
+  used_today: number;
+  free_remaining: number;
+  total_translations: number;
 }
 
 interface TopupCode {
