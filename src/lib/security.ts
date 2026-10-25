@@ -9,12 +9,16 @@ export function initClientSecurity() {
   if (typeof window === "undefined") return;
 
   // 1. Disable context menu (right click)
-  document.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-    return false;
-  });
+  document.addEventListener(
+    "contextmenu",
+    (e) => {
+      e.preventDefault();
+      return false;
+    },
+    true,
+  );
 
-  // 2. Block inspection keyboard shortcuts
+  // 2. Block inspection keyboard shortcuts across Windows, Linux and Mac
   window.addEventListener(
     "keydown",
     (e) => {
@@ -26,23 +30,29 @@ export function initClientSecurity() {
       }
 
       const ctrlOrMeta = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
 
-      // Ctrl+Shift+I (DevTools), Ctrl+Shift+J (Console), Ctrl+Shift+C (Inspect)
-      if (ctrlOrMeta && e.shiftKey && ["I", "i", "J", "j", "C", "c"].includes(e.key)) {
+      // Ctrl+Shift+I / Cmd+Opt+I (DevTools)
+      // Ctrl+Shift+J / Cmd+Opt+J (Console)
+      // Ctrl+Shift+C / Cmd+Opt+C (Inspect)
+      if (
+        (ctrlOrMeta && e.shiftKey && ["i", "j", "c"].includes(key)) ||
+        (e.metaKey && e.altKey && ["i", "j", "c"].includes(key))
+      ) {
         e.preventDefault();
         e.stopPropagation();
         return false;
       }
 
-      // Ctrl+U (View Page Source)
-      if (ctrlOrMeta && ["u", "U"].includes(e.key)) {
+      // Ctrl+U / Cmd+Opt+U (View Page Source)
+      if ((ctrlOrMeta && key === "u") || (e.metaKey && e.altKey && key === "u")) {
         e.preventDefault();
         e.stopPropagation();
         return false;
       }
 
-      // Ctrl+S (Save Page)
-      if (ctrlOrMeta && ["s", "S"].includes(e.key)) {
+      // Ctrl+S / Cmd+S (Save Page)
+      if (ctrlOrMeta && key === "s") {
         e.preventDefault();
         e.stopPropagation();
         return false;
@@ -59,7 +69,6 @@ export function initClientSecurity() {
       window.console.info = noop;
       window.console.debug = noop;
       window.console.warn = noop;
-      // Keep clear functional to prevent terminal logs accumulating
       window.console.clear();
     } catch {
       // Ignore

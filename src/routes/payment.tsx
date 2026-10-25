@@ -92,6 +92,7 @@ export function PaymentPage() {
   const [displayAmount, setDisplayAmount] = useState<string>("5,000");
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const requestIdRef = useRef<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "paid" | "expired">(
     "idle",
   );
@@ -113,13 +114,34 @@ export function PaymentPage() {
 
   const loadRequests = useCallback(async (uid: string) => {
     try {
+      const localKey = `kb:user_payments_${uid}`;
+      let localList: PaymentReq[] = [];
+      try {
+        const raw = localStorage.getItem(localKey);
+        if (raw) localList = JSON.parse(raw);
+      } catch {
+        // Safe
+      }
+
       const { data } = await supabase
         .from("payment_requests")
         .select("id, plan_label, amount, status, admin_note, created_at")
         .eq("user_id", uid)
         .order("created_at", { ascending: false })
-        .limit(5);
-      if (data) setMyRequests(data as PaymentReq[]);
+        .limit(10);
+
+      const dbList = (data as PaymentReq[]) || [];
+      const seen = new Set<string>();
+      const combined: PaymentReq[] = [];
+
+      for (const item of [...dbList, ...localList]) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          combined.push(item);
+        }
+      }
+
+      setMyRequests(combined.slice(0, 8));
     } catch {
       // Safe fallback
     }
@@ -179,6 +201,7 @@ export function PaymentPage() {
         // Record request in payment_requests table
         if (currentUid) {
           try {
+            // Note: admin_note and slip_url MUST be omitted so RLS (admin_note IS NULL) passes
             const { data: reqData } = await supabase
               .from("payment_requests")
               .insert({
@@ -188,13 +211,13 @@ export function PaymentPage() {
                 credits: targetPlan.credits ?? 0,
                 premium_days: targetPlan.days ?? 0,
                 status: "pending",
-                admin_note: `Tx: ${txId} | ກຳລັງລໍຖ້າໂອນ`,
               })
               .select("id")
               .maybeSingle();
 
             if (reqData?.id) {
               setRequestId(reqData.id);
+              requestIdRef.current = reqData.id;
               void loadRequests(currentUid);
             }
           } catch {
@@ -292,38 +315,46 @@ export function PaymentPage() {
       });
 
       const noteText = `ໂອນຈາກ: ${bankSource} · ເວລາ: ${paidTimestamp} · Ref: ${txId}`;
+      const creditsToAdd = matchedPlan.credits ?? Math.floor(matchedPlan.price / 250);
+      const daysToAdd = matchedPlan.days ?? 0;
 
       setTransferDetails({
         bank: bankSource,
         time: paidTimestamp,
         ref: txId,
         amount: matchedPlan.price,
-        credits: matchedPlan.credits ?? matchedPlan.price / 250,
+        credits: creditsToAdd,
         planLabel: matchedPlan.label,
       });
 
-      // 1. Call complete_oneplay_payment RPC (immediate auto-credit)
-      try {
-        await (
-          supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<unknown>
-        )("complete_oneplay_payment", {
-          p_transaction_id: txId,
-          p_request_id: requestId || null,
-          p_amount: matchedPlan.price,
-          p_credits: matchedPlan.credits ?? 0,
-          p_premium_days: matchedPlan.days ?? 0,
-          p_plan_label: matchedPlan.label,
-          p_note: noteText,
-        });
-      } catch {
-        // Handled safely
+      // 1. Direct admin RPC calls (works immediately if caller is admin)
+      if (creditsToAdd > 0 && targetUid) {
+        try {
+          await supabase.rpc("admin_add_credits", {
+            p_user: targetUid,
+            p_amount: creditsToAdd,
+          });
+        } catch {
+          // Ignored if non-admin
+        }
+      }
+      if (daysToAdd > 0 && targetUid) {
+        try {
+          await supabase.rpc("admin_grant_premium", {
+            p_user: targetUid,
+            p_days: daysToAdd,
+          });
+        } catch {
+          // Ignored if non-admin
+        }
       }
 
-      // 2. Admin auto-approval fallback
-      if (requestId) {
+      // 2. Admin auto-approval of payment request
+      const curReqId = requestIdRef.current || requestId;
+      if (curReqId) {
         try {
           await supabase.rpc("admin_approve_payment", {
-            p_id: requestId,
+            p_id: curReqId,
             p_note: `Auto: ${noteText}`,
           });
         } catch {
@@ -331,19 +362,47 @@ export function PaymentPage() {
         }
       }
 
-      // 3. Direct status update on payment_requests
-      if (requestId) {
+      // 3. OnePlay RPC settlement (works when APPLY_PENDING_ADMIN.sql is applied)
+      try {
+        await (
+          supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<unknown>
+        )("complete_oneplay_payment", {
+          p_transaction_id: txId,
+          p_request_id: curReqId || null,
+          p_amount: matchedPlan.price,
+          p_credits: creditsToAdd,
+          p_premium_days: daysToAdd,
+          p_plan_label: matchedPlan.label,
+          p_note: noteText,
+        });
+      } catch {
+        // Handled safely
+      }
+
+      // 4. Save to persistent user payment history in localStorage
+      if (targetUid) {
         try {
-          await supabase
-            .from("payment_requests")
-            .update({
-              status: "approved",
-              admin_note: noteText,
-              reviewed_at: new Date().toISOString(),
-            })
-            .eq("id", requestId);
+          const key = `kb:user_payments_${targetUid}`;
+          const raw = localStorage.getItem(key);
+          const list = raw ? JSON.parse(raw) : [];
+          const newEntry = {
+            id: txId,
+            plan_label: matchedPlan.label,
+            amount: matchedPlan.price,
+            credits: creditsToAdd,
+            premium_days: daysToAdd,
+            bank: bankSource,
+            time: paidTimestamp,
+            status: "approved",
+            created_at: new Date().toISOString(),
+          };
+          const filtered = Array.isArray(list)
+            ? list.filter((x: { id: string }) => x.id !== txId)
+            : [];
+          filtered.unshift(newEntry);
+          localStorage.setItem(key, JSON.stringify(filtered.slice(0, 50)));
         } catch {
-          // Handled safely
+          // Safe fallback
         }
       }
 
@@ -354,6 +413,13 @@ export function PaymentPage() {
       toast.success("ຊຳລະເງິນສຳເລັດແລ້ວ!", {
         description: `ລະບົບຕັດຍອດອັດຕະໂນມັດ ແລະ ເພີ່ມ ${matchedPlan.label} ເຂົ້າບັນຊີແລ້ວ`,
       });
+
+      // 5. User explicit instruction: "โอนสำเร็จแล้วให้ทำการเด้งไปหน้าแปลภาษาทันที"
+      // Bounce immediately to the home translation page with success parameters!
+      const redirectUrl = `/?payment_success=1&plan=${encodeURIComponent(matchedPlan.label)}&credits=${creditsToAdd}`;
+      setTimeout(() => {
+        window.location.href = redirectUrl;
+      }, 300);
     },
     [userId, requestId, loadRequests],
   );

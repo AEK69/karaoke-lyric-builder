@@ -14,11 +14,13 @@ import {
   Hourglass,
   PlusCircle,
   Code2,
+  History,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { translate, setCommunityWords, extractKnownWords, type Direction } from "@/lib/translator";
 import { canonicalOrigin } from "@/lib/canonical-domain";
 import { SuggestWordDialog } from "@/components/SuggestWordDialog";
+import { PaymentHistoryDialog } from "@/components/PaymentHistoryDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -60,7 +62,27 @@ function Index() {
   const [copied, setCopied] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [apiQuota, setApiQuota] = useState<{ limit: number; remaining: number } | null>(null);
+
+  // Check for successful payment bounce from /payment
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment_success") === "1") {
+      const planName = params.get("plan") || "ແພັກເກັດ";
+      const creditsGained = params.get("credits");
+      window.history.replaceState({}, "", window.location.pathname);
+      toast.success("ຊຳລະເງິນສຳເລັດແລ້ວ!", {
+        description: `ລະບົບໄດ້ເພີ່ມ ${planName}${creditsGained ? ` (+${creditsGained} ເຄຣດິດ)` : ""} ເຂົ້າບັນຊີຂອງທ່ານຮຽບຮ້ອຍແລ້ວ`,
+        duration: 6000,
+      });
+      if (session) {
+        void refresh();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -298,6 +320,15 @@ function Index() {
                 >
                   <Gift className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" /> ໂຄດ
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentHistory(true)}
+                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-muted/70 hover:bg-muted text-[11px] sm:text-xs font-bold transition whitespace-nowrap cursor-pointer"
+                  title="ປະຫວັດການເຕີມເຄຣດິດ"
+                >
+                  <History className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                  <span className="hidden sm:inline">ປະຫວັດ</span>
+                </button>
                 {(() => {
                   const meta = session.user.user_metadata ?? {};
                   const avatarUrl = profile?.avatar_url ?? meta.avatar_url ?? meta.picture;
@@ -371,9 +402,14 @@ function Index() {
                       <PremiumCountdown until={profile.premium_until} />
                     )}
                     {credits > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setShowPaymentHistory(true)}
+                        className="px-2 py-0.5 rounded-full bg-accent/15 hover:bg-accent/25 transition text-accent text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        title="ເບິ່ງປະຫວັດການເຕີມເຄຣດິດ"
+                      >
                         +{credits} ເຄຣດິດ
-                      </span>
+                      </button>
                     )}
                     {apiQuota && (
                       <span
@@ -547,6 +583,11 @@ function Index() {
       )}
 
       <SuggestWordDialog open={showSuggest} onClose={() => setShowSuggest(false)} />
+      <PaymentHistoryDialog
+        open={showPaymentHistory}
+        onClose={() => setShowPaymentHistory(false)}
+        userId={session?.user.id}
+      />
     </div>
   );
 }
