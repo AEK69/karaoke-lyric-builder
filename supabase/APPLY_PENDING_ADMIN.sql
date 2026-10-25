@@ -605,6 +605,114 @@ REVOKE ALL ON FUNCTION public.admin_search_users(text) FROM anon, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.admin_search_users(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_word_suggestion(text, text, text) TO authenticated;
 
+-- =====================================================================
+-- Auto Payment Settlement via Jvix OnePlay
+-- =====================================================================
+ALTER TABLE public.payment_requests
+  ADD COLUMN IF NOT EXISTS transaction_id text,
+  ADD COLUMN IF NOT EXISTS expires_at timestamptz;
+
+CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_transaction_id_uidx
+  ON public.payment_requests (transaction_id)
+  WHERE transaction_id IS NOT NULL;
+
+-- Direct client-side settlement RPC when payment completes
+CREATE OR REPLACE FUNCTION public.complete_oneplay_payment(
+  p_transaction_id text,
+  p_request_id uuid DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  r public.payment_requests%ROWTYPE;
+  v_until timestamptz;
+  v_credits integer;
+  v_days integer;
+  v_base integer;
+BEGIN
+  IF v_uid IS NULL THEN
+    RETURN json_build_object('ok', false, 'error', 'not_authenticated');
+  END IF;
+
+  IF p_request_id IS NOT NULL THEN
+    SELECT * INTO r FROM public.payment_requests
+    WHERE id = p_request_id AND user_id = v_uid
+    FOR UPDATE;
+  ELSE
+    SELECT * INTO r FROM public.payment_requests
+    WHERE (transaction_id = p_transaction_id OR id::text = p_transaction_id) AND user_id = v_uid
+    ORDER BY created_at DESC LIMIT 1
+    FOR UPDATE;
+  END IF;
+
+  IF NOT FOUND THEN
+    SELECT * INTO r FROM public.payment_requests
+    WHERE user_id = v_uid AND status = 'pending'
+    ORDER BY created_at DESC LIMIT 1
+    FOR UPDATE;
+  END IF;
+
+  IF NOT FOUND THEN
+    RETURN json_build_object('ok', false, 'error', 'not_found');
+  END IF;
+
+  IF r.status = 'approved' THEN
+    RETURN json_build_object('ok', true, 'status', 'already_approved', 'credits', r.credits, 'premium_days', r.premium_days);
+  END IF;
+
+  v_base := r.amount;
+  IF v_base = 5000 THEN
+    v_credits := 20; v_days := 0;
+  ELSIF v_base = 10000 THEN
+    v_credits := 60; v_days := 0;
+  ELSIF v_base = 30000 THEN
+    v_credits := 0; v_days := 30;
+  ELSIF v_base = 300000 THEN
+    v_credits := 0; v_days := 365;
+  ELSE
+    v_credits := coalesce(r.credits, 0);
+    v_days := coalesce(r.premium_days, 0);
+  END IF;
+
+  -- Allow privileged write on profiles
+  PERFORM set_config('app.privileged_profile_write', 'on', true);
+
+  IF v_credits > 0 THEN
+    UPDATE public.profiles
+    SET extra_credits = coalesce(extra_credits, 0) + v_credits
+    WHERE id = v_uid;
+  END IF;
+
+  IF v_days > 0 THEN
+    SELECT greatest(coalesce(premium_until, now()), now()) + (v_days || ' days')::interval
+      INTO v_until FROM public.profiles WHERE id = v_uid;
+    UPDATE public.profiles
+    SET is_premium = true, premium_until = v_until
+    WHERE id = v_uid;
+  END IF;
+
+  UPDATE public.payment_requests
+  SET status = 'approved',
+      reviewed_at = now(),
+      transaction_id = coalesce(r.transaction_id, p_transaction_id),
+      admin_note = coalesce(r.admin_note, 'Auto-verified via Jvix OnePlay')
+  WHERE id = r.id;
+
+  RETURN json_build_object(
+    'ok', true,
+    'status', 'paid',
+    'credits', v_credits,
+    'premium_days', v_days
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.complete_oneplay_payment(text, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.complete_oneplay_payment(text, uuid) TO authenticated, service_role;
 
 COMMIT;
 NOTIFY pgrst, 'reload schema';

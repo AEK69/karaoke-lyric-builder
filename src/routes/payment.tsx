@@ -167,7 +167,7 @@ export function PaymentPage() {
           }
         }
 
-        // Countdown timer
+        // Countdown timer (5 minutes)
         countdownIntervalRef.current = setInterval(() => {
           setTimeLeft((prev) => {
             if (prev <= 1) {
@@ -180,13 +180,13 @@ export function PaymentPage() {
           });
         }, 1000);
 
-        // Poll check every 3 seconds (as required)
+        // Poll check every 3 seconds (as requested)
         if (txId && !txId.startsWith("TX-")) {
           pollIntervalRef.current = setInterval(() => {
             void checkStatus(txId, targetPlan, currentUid);
           }, 3000);
         }
-      } catch (err) {
+      } catch {
         toast.error("ບໍ່ສາມາດສ້າງ QR ໄດ້ ກະລຸນາລອງໃໝ່");
       } finally {
         setLoadingQR(false);
@@ -222,25 +222,37 @@ export function PaymentPage() {
       const targetUid = uid || userId;
       const matchedPlan = planFromAmount(amountBaseNum) || currentPlan;
 
-      // 2. Call oneplay_poll RPC if available in database
+      // 2. Direct user credit via complete_oneplay_payment RPC
+      try {
+        await (
+          supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<unknown>
+        )("complete_oneplay_payment", {
+          p_transaction_id: txId,
+          p_request_id: requestId || null,
+        });
+      } catch {
+        // Handled safely
+      }
+
+      // 3. Admin auto-approval RPC (for admin users)
+      if (requestId) {
+        try {
+          await supabase.rpc("admin_approve_payment", {
+            p_id: requestId,
+            p_note: `Auto-Cut: ${txId}`,
+          });
+        } catch {
+          // Handled safely
+        }
+      }
+
+      // 4. oneplay_poll RPC fallback
       try {
         await (
           supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<unknown>
         )("oneplay_poll", { p_transaction_id: txId });
       } catch {
         // Handled safely
-      }
-
-      // 3. Auto-approve payment request in Supabase
-      if (requestId) {
-        try {
-          await supabase.rpc("admin_approve_payment", {
-            p_id: requestId,
-            p_note: `Auto-Verified: ${txId}`,
-          });
-        } catch {
-          // Handled safely
-        }
       }
 
       if (targetUid) {
@@ -265,7 +277,6 @@ export function PaymentPage() {
       const res = await checkPaymentStatus(txId);
 
       if (res.paid) {
-        // Credit according to amount_base
         const baseNum = res.amountBase ? parseAmount(res.amountBase) : currentPlan.price;
         await handlePaymentSuccess(txId, baseNum || currentPlan.price, currentPlan, uid);
       } else if (res.status === "expired") {
@@ -295,46 +306,58 @@ export function PaymentPage() {
   const onePayDeepLink = qrPayload ? `onepay://qr/${qrPayload}` : null;
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-12">
       <Toaster richColors position="top-center" />
-      <header className="px-4 sm:px-6 pt-6 pb-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm font-bold hover:opacity-70 transition"
-          >
-            <ArrowLeft className="w-4 h-4" /> ກັບໜ້າຫຼັກ
-          </Link>
-          <h1 className="text-xl font-extrabold flex items-center gap-2">
-            <Crown className="w-5 h-5 text-premium" /> ຊຳລະເງິນອັດຕະໂນມັດ
-          </h1>
-          <div className="w-16" />
-        </div>
+
+      {/* Compact Header */}
+      <header className="px-3 sm:px-4 pt-3 pb-2 max-w-xl mx-auto flex items-center justify-between">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-muted-foreground hover:text-foreground transition"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> ກັບໜ້າຫຼັກ
+        </Link>
+        <h1 className="text-base sm:text-lg font-extrabold flex items-center gap-1.5">
+          <Crown className="w-4 h-4 text-premium" /> ຊຳລະເງິນອັດຕະໂນມັດ
+        </h1>
+        <div className="w-12" />
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 space-y-4">
-        {/* Banner: เติมได้ทุกธนาคาร */}
-        <div className="rounded-3xl overflow-hidden border border-border shadow-soft glass bg-white/60 dark:bg-black/30">
-          <img
-            src="/pay-banks.jpg"
-            alt="ເຕີມໄດ້ ທຸກທະນາຄານ — BCEL One, Kasikorn, m moneyX, JDB, u-money, BFL, Lao-Viet Bank, Indochina Bank"
-            className="w-full h-auto object-cover max-h-56 sm:max-h-64"
-          />
-          <div className="p-3 sm:p-4 bg-gradient-to-r from-emerald-500/10 via-primary/10 to-purple-500/10 flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-center">
-            <Zap className="w-4 h-4 text-emerald-500 shrink-0 fill-emerald-500" />
-            <span>ລະບົບຕັດຍອດອັດຕະໂນມັດ 100% · ໂອນແລ້ວລະບົບເຕີມເຄຣດິດທັນທີ ບໍ່ຕ້ອງແນບສະລິບ!</span>
+      <main className="max-w-xl mx-auto px-3 sm:px-4 space-y-2.5 sm:space-y-3">
+        {/* Compact Banner: เติมได้ทุกธนาคาร */}
+        <div className="rounded-2xl overflow-hidden border border-border/80 shadow-xs glass bg-white/60 dark:bg-black/30">
+          <div className="relative h-24 sm:h-28 overflow-hidden">
+            <img
+              src="/pay-banks.jpg"
+              alt="ເຕີມໄດ້ ທຸກທະນາຄານ"
+              className="w-full h-full object-cover object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white text-xs font-bold">
+              <span className="flex items-center gap-1 drop-shadow-sm text-[11px] sm:text-xs">
+                <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0" />
+                <span>ຕັດຍອດອັດຕະໂນມັດ 100%</span>
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-white/90 drop-shadow-sm">
+                ໂອນແລ້ວເຄຣດິດເຂົ້າທັນທີ
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* 1. Plan Selection */}
-        <div className="glass rounded-3xl p-5 border border-white/40 dark:border-white/10 shadow-soft">
-          <h2 className="font-extrabold mb-3 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-              1
-            </span>
-            ເລືອກແພັກເກດ
-          </h2>
-          <div className="grid grid-cols-2 gap-2.5">
+        {/* 1. Plan Selection (Compact 2x2 Grid) */}
+        <div className="glass rounded-2xl p-3 sm:p-3.5 border border-white/40 dark:border-white/10 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+              <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-extrabold">
+                1
+              </span>
+              ເລືອກແພັກເກດ
+            </h2>
+            <span className="text-[11px] text-muted-foreground">ກົດເພື່ອເລືອກ</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             {PLANS.map((p) => {
               const active = plan.label === p.label;
               return (
@@ -342,29 +365,31 @@ export function PaymentPage() {
                   key={p.label}
                   onClick={() => handleSelectPlan(p)}
                   aria-pressed={active}
-                  className={`relative text-left p-3.5 rounded-2xl border-2 transition-all ${
+                  className={`relative text-left p-2.5 rounded-xl border transition-all ${
                     active
-                      ? "border-primary bg-primary/10 shadow-sm scale-[1.01]"
+                      ? "border-primary bg-primary/10 shadow-xs scale-[1.01]"
                       : "border-border hover:border-primary/40 bg-white/40 dark:bg-white/5"
                   }`}
                 >
-                  {active && (
-                    <span className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <Check className="w-3 h-3" />
-                    </span>
-                  )}
-                  <div className="text-xs font-bold text-muted-foreground">{p.label}</div>
-                  <div className="text-base sm:text-lg font-extrabold text-primary mt-0.5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-foreground truncate">{p.label}</div>
+                    {active && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm sm:text-base font-extrabold text-primary mt-0.5">
                     {p.price.toLocaleString()} ກີບ
                   </div>
                   {p.credits && (
-                    <div className="text-[11px] text-muted-foreground mt-1">
-                      + {p.credits} ເຄຣດິດແປເພງ
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      +{p.credits} ເຄຣດິດ
                     </div>
                   )}
                   {p.days && (
-                    <div className="text-[11px] text-premium font-semibold mt-1">
-                      👑 ໃຊ້ງານບໍ່ຈຳກັດ {p.days} ວັນ
+                    <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5">
+                      👑 ບໍ່ຈຳກັດ {p.days} ວັນ
                     </div>
                   )}
                 </button>
@@ -374,80 +399,82 @@ export function PaymentPage() {
         </div>
 
         {/* 2. QR Code & Auto Payment State */}
-        <div className="glass rounded-3xl p-6 border border-white/40 dark:border-white/10 shadow-soft text-center">
-          <h2 className="font-extrabold mb-4 flex items-center justify-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
+        <div className="glass rounded-2xl p-3.5 sm:p-4 border border-white/40 dark:border-white/10 shadow-xs text-center space-y-2.5">
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-extrabold">
               2
             </span>
-            ສະແກນ QR ຊຳລະເງິນ
-          </h2>
+            <h2 className="text-xs sm:text-sm font-bold">ສະແກນ QR ໂອນເງິນ</h2>
+          </div>
 
           {paymentStatus === "paid" ? (
             /* PAID SUCCESS SCREEN */
-            <div className="py-6 px-4 rounded-3xl bg-emerald-500/10 border-2 border-emerald-500/40 text-center animate-in fade-in zoom-in-95 duration-300">
-              <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-emerald-500/30">
-                <Check className="w-9 h-9" />
+            <div className="py-5 px-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 text-center animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto mb-2 shadow-md shadow-emerald-500/20">
+                <Check className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+              <h3 className="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400">
                 ຊຳລະເງິນສຳເລັດແລ້ວ!
               </h3>
-              <p className="text-sm font-semibold mt-1 text-muted-foreground">
+              <p className="text-xs font-semibold mt-1 text-muted-foreground">
                 ລະບົບຕັດຍອດອັດຕະໂນມັດ ແລະ ເພີ່ມ{" "}
                 <span className="text-primary font-bold">{plan.label}</span> ໃຫ້ບັນຊີຂອງທ່ານແລ້ວ
               </p>
-              <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
-                <Link to="/">
+              <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center max-w-xs mx-auto">
+                <Link to="/" className="flex-1">
                   <Button
-                    size="lg"
-                    className="w-full sm:w-auto font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                    size="sm"
+                    className="w-full font-bold bg-emerald-600 hover:bg-emerald-700 text-white h-9"
                   >
-                    <Sparkles className="w-4 h-4 mr-2" /> ໄປໜ້າແປເນື້ອເພງ (ໜ້າຫຼັກ)
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" /> ໄປໜ້າແປເນື້ອເພງ
                   </Button>
                 </Link>
                 <Button
                   variant="outline"
-                  size="lg"
+                  size="sm"
                   onClick={() => requestQR(plan)}
-                  className="w-full sm:w-auto font-bold"
+                  className="font-bold h-9"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" /> ເຕີມເພີ່ມອີກ
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" /> ເຕີມເພີ່ມ
                 </Button>
               </div>
             </div>
           ) : (
-            /* PENDING QR DISPLAY */
-            <div className="space-y-4">
-              <div className="relative inline-block mx-auto bg-white p-3 sm:p-4 rounded-3xl shadow-md border">
+            /* PENDING QR DISPLAY (Compact) */
+            <div className="space-y-2.5">
+              <div className="relative inline-block mx-auto bg-white p-2 rounded-2xl shadow-xs border border-border">
                 {loadingQR ? (
-                  <div className="w-64 h-64 flex flex-col items-center justify-center gap-2">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    <span className="text-xs font-bold text-muted-foreground">ກຳລັງສ້າງ QR...</span>
+                  <div className="w-40 h-40 sm:w-48 sm:h-48 flex flex-col items-center justify-center gap-1.5">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    <span className="text-[11px] font-bold text-muted-foreground">
+                      ກຳລັງສ້າງ QR...
+                    </span>
                   </div>
                 ) : qrUrl ? (
                   <>
                     <img
                       src={qrUrl}
                       alt="Payment QR Code"
-                      className="w-64 h-64 object-contain mx-auto"
+                      className="w-40 h-40 sm:w-48 sm:h-48 object-contain mx-auto"
                     />
                     {paymentStatus === "expired" && (
-                      <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] rounded-3xl flex flex-col items-center justify-center p-4 text-white">
-                        <Clock className="w-10 h-10 text-amber-400 mb-2" />
-                        <span className="font-extrabold text-sm">QR Code ໝົດອາຍຸແລ້ວ</span>
+                      <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center p-3 text-white">
+                        <Clock className="w-8 h-8 text-amber-400 mb-1" />
+                        <span className="font-extrabold text-xs">QR ໝົດອາຍຸແລ້ວ</span>
                         <Button
                           size="sm"
                           onClick={() => requestQR(plan)}
-                          className="mt-3 bg-primary text-white font-bold"
+                          className="mt-2 bg-primary text-white font-bold h-7 text-xs px-2.5"
                         >
-                          <RefreshCw className="w-3.5 h-3.5 mr-1" /> ສ້າງ QR ໃໝ່
+                          <RefreshCw className="w-3 h-3 mr-1" /> ສ້າງ QR ໃໝ່
                         </Button>
                       </div>
                     )}
                   </>
                 ) : (
-                  <div className="w-64 h-64 flex flex-col items-center justify-center gap-2">
-                    <QrCode className="w-12 h-12 text-muted-foreground" />
-                    <Button size="sm" onClick={() => requestQR(plan)}>
+                  <div className="w-40 h-40 sm:w-48 sm:h-48 flex flex-col items-center justify-center gap-1.5">
+                    <QrCode className="w-8 h-8 text-muted-foreground" />
+                    <Button size="sm" onClick={() => requestQR(plan)} className="h-7 text-xs">
                       ລອງໃໝ່
                     </Button>
                   </div>
@@ -456,25 +483,25 @@ export function PaymentPage() {
 
               {/* Amount & Account Info */}
               <div>
-                <div className="text-2xl sm:text-3xl font-black text-primary">
+                <div className="text-xl sm:text-2xl font-black text-primary">
                   {displayAmount} ກີບ
                 </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span>ບັນຊີປາຍທາງ: AKAPHON XAYYABED · ທຸກທະນາຄານ</span>
+                <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center justify-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <span>AKAPHON XAYYABED · ທຸກທະນາຄານ</span>
                 </div>
               </div>
 
-              {/* Live Status Detector Badge */}
-              <div className="rounded-2xl bg-primary/5 border border-primary/20 p-3 max-w-md mx-auto">
-                <div className="flex items-center justify-center gap-2 text-xs font-bold text-primary">
-                  <span className="relative flex h-2.5 w-2.5">
+              {/* Compact Live Status Detector */}
+              <div className="rounded-xl bg-primary/5 border border-primary/20 py-2 px-3 max-w-sm mx-auto text-xs">
+                <div className="flex items-center justify-center gap-1.5 font-bold text-primary text-[11px] sm:text-xs">
+                  <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span>ກຳລັງລໍຖ້າການໂອນເງິນ... ລະບົບກວດສອບອັດຕະໂນມັດ</span>
+                  <span>ກຳລັງກວດສອບຍອດໂອນອັດຕະໂນມັດ...</span>
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-1">
+                <div className="text-[10px] text-muted-foreground mt-0.5">
                   ໝົດອາຍຸໃນ:{" "}
                   <span className="font-mono font-bold text-foreground">
                     {formatTime(timeLeft)}
@@ -484,40 +511,42 @@ export function PaymentPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 max-w-md mx-auto pt-1">
+              <div className="flex items-center justify-center gap-2 max-w-sm mx-auto pt-0.5">
                 {onePayDeepLink && (
                   <Button
                     variant="outline"
-                    className="w-full sm:w-auto font-bold border-primary/30 hover:bg-primary/10"
+                    size="sm"
+                    className="flex-1 text-xs font-bold h-9 border-primary/30"
                     onClick={() => {
                       window.location.href = onePayDeepLink;
                     }}
                   >
-                    <ExternalLink className="w-4 h-4 mr-1.5" /> ເປີດແອັບ OnePay
+                    <ExternalLink className="w-3.5 h-3.5 mr-1" /> ເປີດ OnePay
                   </Button>
                 )}
                 <Button
                   variant="default"
+                  size="sm"
                   disabled={checking || loadingQR || paymentStatus === "expired"}
                   onClick={() => {
                     if (transactionId) {
                       void checkStatus(transactionId, plan, userId, true);
                     }
                   }}
-                  className="w-full sm:w-auto font-bold shadow-sm"
+                  className="flex-1 text-xs font-bold h-9 shadow-xs"
                 >
                   {checking ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
                   ) : (
-                    <RefreshCw className="w-4 h-4 mr-1.5" />
+                    <RefreshCw className="w-3.5 h-3.5 mr-1" />
                   )}
-                  ກວດສອບຍອດໂອນດຽວນີ້
+                  ກວດສອບດຽວນີ້
                 </Button>
               </div>
 
               {transactionId && (
-                <div className="text-[11px] text-muted-foreground flex items-center justify-center gap-1 pt-1">
-                  <span>Ref: {transactionId.slice(-12)}</span>
+                <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                  <span>Ref: {transactionId.slice(-10)}</span>
                   <button
                     onClick={() => {
                       void navigator.clipboard.writeText(transactionId);
@@ -525,7 +554,7 @@ export function PaymentPage() {
                     }}
                     className="hover:text-primary transition"
                   >
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-2.5 h-2.5" />
                   </button>
                 </div>
               )}
@@ -533,19 +562,19 @@ export function PaymentPage() {
           )}
         </div>
 
-        {/* Requests History */}
+        {/* Compact Requests History */}
         {myRequests.length > 0 && (
-          <div className="glass rounded-3xl p-5 border border-white/40 dark:border-white/10 shadow-soft">
-            <h2 className="font-extrabold mb-3">ປະຫວັດການຊຳລະເງິນ</h2>
-            <div className="space-y-2">
-              {myRequests.map((r) => (
+          <div className="glass rounded-2xl p-3 sm:p-3.5 border border-white/40 dark:border-white/10 shadow-xs">
+            <h2 className="text-xs sm:text-sm font-bold mb-2">ປະຫວັດການຊຳລະເງິນ</h2>
+            <div className="space-y-1.5">
+              {myRequests.slice(0, 3).map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-white/40 dark:bg-white/5 p-3"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border/80 bg-white/40 dark:bg-white/5 py-2 px-2.5 text-xs"
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-bold truncate">{r.plan_label}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="font-bold truncate">{r.plan_label}</div>
+                    <div className="text-[10px] text-muted-foreground">
                       {r.amount.toLocaleString()} ກີບ ·{" "}
                       {new Date(r.created_at).toLocaleDateString()}
                     </div>
@@ -564,29 +593,29 @@ export function PaymentPage() {
 function PaymentStatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
     pending: {
-      label: "ລໍຖ້າກວດສອບ",
+      label: "ລໍຖ້າ",
       cls: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-      icon: <Clock className="w-3 h-3" />,
+      icon: <Clock className="w-2.5 h-2.5" />,
     },
     approved: {
-      label: "ອະນຸມັດແລ້ວ",
+      label: "ສຳເລັດ",
       cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-      icon: <Check className="w-3 h-3" />,
+      icon: <Check className="w-2.5 h-2.5" />,
     },
     paid: {
-      label: "ຊຳລະແລ້ວ",
+      label: "ສຳເລັດ",
       cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-      icon: <Check className="w-3 h-3" />,
+      icon: <Check className="w-2.5 h-2.5" />,
     },
     rejected: {
       label: "ປະຕິເສດ",
       cls: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-      icon: <X className="w-3 h-3" />,
+      icon: <X className="w-2.5 h-2.5" />,
     },
     expired: {
       label: "ໝົດອາຍຸ",
       cls: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-      icon: <Clock className="w-3 h-3" />,
+      icon: <Clock className="w-2.5 h-2.5" />,
     },
   };
   const s = map[status] ?? {
@@ -596,7 +625,7 @@ function PaymentStatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-full text-xs font-bold ${s.cls}`}
+      className={`inline-flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${s.cls}`}
     >
       {s.icon} {s.label}
     </span>
