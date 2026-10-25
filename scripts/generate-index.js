@@ -25,7 +25,6 @@ const ROUTES = [
   { path: "/", out: ".output/public/index.html" },
   { path: "/payment", out: ".output/public/payment/index.html" },
   { path: "/payment", out: ".output/public/payment.html" },
-  { path: "/admin", out: ".output/public/admin/index.html" },
   { path: "/redeem", out: ".output/public/redeem/index.html" },
   { path: "/api-docs", out: ".output/public/api-docs/index.html" },
 ];

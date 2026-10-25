@@ -19,6 +19,8 @@ import {
   Coins,
   X,
   ScrollText,
+  Zap,
+  Clock,
 } from "lucide-react";
 import {
   AreaChart,
@@ -183,6 +185,9 @@ function AdminPage() {
         .maybeSingle();
       if (!r) {
         setAuthorized(false);
+        if (typeof window !== "undefined") {
+          window.location.replace("/");
+        }
         return;
       }
       setAuthorized(true);
@@ -341,17 +346,12 @@ function AdminPage() {
         <Loader2 className="w-6 h-6 animate-spin" />
       </div>
     );
-  if (!authorized)
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="glass rounded-3xl p-8 text-center max-w-sm">
-          <h2 className="text-xl font-extrabold mb-2">ບໍ່ມີສິດເຂົ້າເຖິງ</h2>
-          <Link to="/">
-            <Button>ກັບໜ້າຫຼັກ</Button>
-          </Link>
-        </div>
-      </div>
-    );
+  if (!authorized) {
+    if (typeof window !== "undefined") {
+      window.location.replace("/");
+    }
+    return null;
+  }
 
   return (
     <div className="min-h-screen">
@@ -610,18 +610,45 @@ function AdminPage() {
                 </FilterPill>
               ))}
             </div>
+
+            {/* Auto Settlement Banner */}
+            <div className="flex items-center gap-2 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-3">
+              <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                ລະບົບຕັດຍອດ ແລະ ອະນຸມັດອັດຕະໂນມັດ 100% — ເມື່ອລູກຄ້າໂອນສຳເລັດ
+                ເຄຣດິດຈະເຂົ້າບັນຊີທັນທີ ໂດຍບໍ່ຕ້ອງກົດອະນຸມັດດ້ວຍມື
+              </span>
+            </div>
+
             <div className="space-y-2 max-h-[70vh] overflow-y-auto">
               {payments.map((p) => (
                 <div
                   key={p.id}
-                  className="border border-border rounded-2xl p-3 bg-white/40 dark:bg-white/5"
+                  className="border border-border rounded-2xl p-3.5 bg-white/40 dark:bg-white/5"
                 >
                   <div className="flex justify-between items-start flex-wrap gap-2">
                     <div className="flex-1 min-w-[200px]">
-                      <div className="font-bold text-sm">{p.full_name ?? p.email}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm">{p.full_name ?? p.email}</span>
+                        {p.status === "approved" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            <Check className="w-3 h-3 text-emerald-600" /> ອະນຸມັດອັດຕະໂນມັດແລ້ວ
+                          </span>
+                        ) : p.status === "pending" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            <Clock className="w-3 h-3 text-amber-600" /> ລໍຖ້າກວດສອບອັດຕະໂນມັດ
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300">
+                            <X className="w-3 h-3 text-red-600" /> ປະຕິເສດ
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-muted-foreground mt-0.5">
                         {p.email} · {new Date(p.created_at).toLocaleString()}
                       </div>
+
                       <div className="text-sm mt-1">
                         <span className="font-extrabold text-primary">
                           {p.amount.toLocaleString()} ກີບ
@@ -635,31 +662,16 @@ function AdminPage() {
                           <span className="ml-2 text-premium">+{p.premium_days} ມື້</span>
                         )}
                       </div>
-                      <div className="text-xs mt-1">
-                        <span
-                          className={`px-2 py-0.5 rounded-full font-bold ${p.status === "pending" ? "bg-yellow-100 text-yellow-800" : p.status === "approved" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                        >
-                          {p.status}
-                        </span>
-                        {p.admin_note && (
-                          <span className="ml-2 text-muted-foreground">"{p.admin_note}"</span>
-                        )}
-                      </div>
+
+                      {p.admin_note && (
+                        <div className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1 flex-wrap">
+                          <span className="font-semibold text-foreground">ບັນທຶກການໂອນ:</span>
+                          <span className="bg-muted px-2 py-0.5 rounded-md font-mono text-[11px]">
+                            {p.admin_note}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {p.status === "pending" && (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          onClick={() => approvePayment(p.id)}
-                          className="bg-success text-success-foreground"
-                        >
-                          <Check className="w-3 h-3 mr-1" /> ອະນຸມັດ
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => rejectPayment(p.id)}>
-                          ປະຕິເສດ
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}

@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { redirectToCanonical } from "../lib/canonical-domain";
 import { THEME_INIT_SCRIPT } from "../lib/theme";
 import { ThemeProvider } from "../components/theme-provider";
+import { initClientSecurity } from "../lib/security";
 
 function NotFoundComponent() {
   return (
@@ -163,6 +164,7 @@ function RootComponent() {
   // Forward visitors on the Firebase default domains to the canonical domain.
   useEffect(() => {
     redirectToCanonical();
+    initClientSecurity();
   }, []);
 
   return (
