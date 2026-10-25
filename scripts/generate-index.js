@@ -1,9 +1,8 @@
-import { execSync, spawn } from "child_process";
-import { writeFileSync, readdirSync } from "fs";
+import { spawn } from "child_process";
+import { writeFileSync, readdirSync, mkdirSync } from "fs";
+import { dirname } from "path";
 
 const PORT = 3099;
-const url = `http://localhost:${PORT}/`;
-
 const env = {
   ...process.env,
   PORT: String(PORT),
@@ -22,26 +21,39 @@ server.stderr.on("data", () => {});
 
 await new Promise((res) => setTimeout(res, 3000));
 
+const ROUTES = [
+  { path: "/", out: ".output/public/index.html" },
+  { path: "/payment", out: ".output/public/payment/index.html" },
+  { path: "/payment", out: ".output/public/payment.html" },
+  { path: "/admin", out: ".output/public/admin/index.html" },
+  { path: "/redeem", out: ".output/public/redeem/index.html" },
+  { path: "/api-docs", out: ".output/public/api-docs/index.html" },
+];
+
 try {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
-  let html = await res.text();
-
-  // The SSR server and the client build can compute different content hashes
-  // for the same CSS, so the rendered <link href="/assets/styles-*.css"> may
-  // point to a file that doesn't exist in .output/public. Rewrite every CSS
-  // href to the real stylesheet present in the client assets directory.
   const realCss = readdirSync(".output/public/assets").filter((f) => f.endsWith(".css"));
-  if (realCss.length === 1) {
-    html = html.replace(/\/assets\/[A-Za-z0-9._-]+\.css/g, `/assets/${realCss[0]}`);
-  } else if (realCss.length > 1) {
-    console.warn(`Multiple CSS files found, skipping rewrite: ${realCss.join(", ")}`);
-  }
 
-  writeFileSync(".output/public/index.html", html);
-  console.log(
-    `Generated .output/public/index.html from SSR (${html.length} bytes), CSS -> ${realCss.join(", ")}`,
-  );
+  for (const r of ROUTES) {
+    try {
+      const res = await fetch(`http://localhost:${PORT}${r.path}`);
+      if (!res.ok) {
+        console.warn(`Route ${r.path} returned ${res.status}, skipping.`);
+        continue;
+      }
+      let html = await res.text();
+
+      // Ensure CSS points to the actual file in assets
+      if (realCss.length === 1) {
+        html = html.replace(/\/assets\/[A-Za-z0-9._-]+\.css/g, `/assets/${realCss[0]}`);
+      }
+
+      mkdirSync(dirname(r.out), { recursive: true });
+      writeFileSync(r.out, html);
+      console.log(`Generated ${r.out} from SSR for ${r.path} (${html.length} bytes)`);
+    } catch (routeErr) {
+      console.warn(`Failed to render ${r.path}:`, routeErr.message);
+    }
+  }
 } catch (e) {
   console.error("SSR pre-render failed:", e.message);
   process.exit(1);

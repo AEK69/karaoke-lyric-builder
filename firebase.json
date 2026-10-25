@@ -23,11 +23,35 @@
         ]
       },
       {
+        "source": "/",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
         "source": "/index.html",
         "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
       },
       {
-        "source": "/",
+        "source": "/payment",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/payment/**",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/admin",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/admin/**",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/redeem",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      },
+      {
+        "source": "/**/*.html",
         "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
       },
       {
