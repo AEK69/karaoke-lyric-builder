@@ -33,6 +33,7 @@ import {
 } from "@/lib/plans";
 import { createPaymentQR, checkPaymentStatus, parseAmount } from "@/lib/jvix";
 import { generateOnePayDynamicQR } from "@/lib/onepay";
+import { recordSuccessfulPayment } from "@/lib/credits";
 
 export const Route = createFileRoute("/payment")({
   head: () => ({ meta: [{ title: "ເຕີມເຄຣດິດອັດຕະໂນມັດ — Lao Karaoke" }] }),
@@ -381,32 +382,16 @@ export function PaymentPage() {
 
       // 4. Save to persistent user payment history in localStorage
       if (targetUid) {
-        try {
-          const key = `kb:user_payments_${targetUid}`;
-          const raw = localStorage.getItem(key);
-          const list = raw ? JSON.parse(raw) : [];
-          const newEntry = {
-            id: txId,
-            plan_label: matchedPlan.label,
-            amount: matchedPlan.price,
-            credits: creditsToAdd,
-            premium_days: daysToAdd,
-            bank: bankSource,
-            time: paidTimestamp,
-            status: "approved",
-            created_at: new Date().toISOString(),
-          };
-          const filtered = Array.isArray(list)
-            ? list.filter((x: { id: string }) => x.id !== txId)
-            : [];
-          filtered.unshift(newEntry);
-          localStorage.setItem(key, JSON.stringify(filtered.slice(0, 50)));
-        } catch {
-          // Safe fallback
-        }
-      }
-
-      if (targetUid) {
+        recordSuccessfulPayment(
+          targetUid,
+          txId,
+          matchedPlan.label,
+          matchedPlan.price,
+          creditsToAdd,
+          daysToAdd,
+          bankSource,
+          paidTimestamp,
+        );
         void loadRequests(targetUid);
       }
 

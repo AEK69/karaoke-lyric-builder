@@ -15,12 +15,14 @@ import {
   PlusCircle,
   Code2,
   History,
+  Coins,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { translate, setCommunityWords, extractKnownWords, type Direction } from "@/lib/translator";
 import { canonicalOrigin } from "@/lib/canonical-domain";
 import { SuggestWordDialog } from "@/components/SuggestWordDialog";
 import { PaymentHistoryDialog } from "@/components/PaymentHistoryDialog";
+import { getLocalExtraCredits, consumeOneLocalCredit } from "@/lib/credits";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -174,8 +176,17 @@ function Index() {
     return new Date(profile.premium_until) > new Date();
   }, [profile]);
 
-  const remaining = isPremium ? Infinity : Math.max(0, FREE_DAILY_LIMIT - used);
-  const credits = profile?.extra_credits ?? 0;
+  const [localCreditTrigger, setLocalCreditTrigger] = useState(0);
+  const dbCredits = profile?.extra_credits ?? 0;
+  const localCredits = session ? getLocalExtraCredits(session.user.id) : 0;
+  // Combine credits, ensuring local verified purchases are always respected
+  const credits = useMemo(() => {
+    return Math.max(dbCredits, localCredits);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbCredits, localCredits, localCreditTrigger]);
+
+  const freeRemaining = isPremium ? Infinity : Math.max(0, FREE_DAILY_LIMIT - used);
+  const totalRemaining = isPremium ? Infinity : freeRemaining + credits;
 
   async function handleLogin() {
     setSigningIn(true);
@@ -229,13 +240,19 @@ function Index() {
         credits: number;
       };
       if (!res.allowed) {
-        navigate({ to: "/payment" });
-        toast.error(`ໃຊ້ຄົບໂຄຕ້າແລ້ວ — ສະໝັກ Premium ຫຼື ໃຊ້ໂຄດເຕີມ`);
-        setBusy(false);
-        return;
+        if (session && getLocalExtraCredits(session.user.id) > 0) {
+          consumeOneLocalCredit(session.user.id);
+          setLocalCreditTrigger((prev) => prev + 1);
+        } else {
+          navigate({ to: "/payment" });
+          toast.error(`ໃຊ້ຄົບໂຄຕ້າແລ້ວ — ສະໝັກ Premium ຫຼື ໃຊ້ໂຄດເຕີມ`);
+          setBusy(false);
+          return;
+        }
+      } else {
+        setUsed(res.used);
+        if (profile) setProfile({ ...profile, extra_credits: res.credits });
       }
-      setUsed(res.used);
-      if (profile) setProfile({ ...profile, extra_credits: res.credits });
       const translated = translate(text, direction);
       setOutput(translated);
       // Popular-word stats power the public /api/public/stats endpoint.
@@ -376,16 +393,29 @@ function Index() {
                       <Zap className="w-4 h-4 text-primary shrink-0" />
                       {isPremium ? (
                         <span className="text-gradient font-extrabold truncate">
-                          ໃຊ້ງານບໍ່ຈຳກັດ
+                          ໃຊ້ງານບໍ່ຈຳກັດ (Premium)
                         </span>
                       ) : (
-                        <span className="truncate">
-                          ເຫຼືອ <span className="font-extrabold text-primary">{remaining}</span>
-                          <span className="text-muted-foreground">
-                            {" "}
-                            / {FREE_DAILY_LIMIT} ຄັ້ງມື້ນີ້
-                          </span>
-                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-xs font-bold text-muted-foreground">ເຫຼືອ</span>
+                            <span className="text-xl sm:text-2xl font-black text-primary tracking-tight">
+                              {totalRemaining}
+                            </span>
+                            <span className="text-xs font-bold text-muted-foreground">
+                              ຄັ້ງທັງໝົດ
+                            </span>
+                            {credits > 0 && (
+                              <span className="text-[11px] font-bold text-accent px-1.5 py-0.5 rounded-md bg-accent/15">
+                                (+{credits} ເຄຣດິດ)
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            ໂຄຕ້າຟຣີມື້ນີ້: {freeRemaining}/{FREE_DAILY_LIMIT} ຄັ້ງ
+                            {credits > 0 ? ` · ເຄຣດິດສະສົມ: ${credits} ຄັ້ງ` : ""}
+                          </div>
+                        </div>
                       )}
                     </div>
                     {!isPremium && (
@@ -405,10 +435,11 @@ function Index() {
                       <button
                         type="button"
                         onClick={() => setShowPaymentHistory(true)}
-                        className="px-2 py-0.5 rounded-full bg-accent/15 hover:bg-accent/25 transition text-accent text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1 rounded-full bg-accent/20 hover:bg-accent/30 transition text-accent text-xs font-extrabold flex items-center gap-1 cursor-pointer border border-accent/30 shadow-xs"
                         title="ເບິ່ງປະຫວັດການເຕີມເຄຣດິດ"
                       >
-                        +{credits} ເຄຣດິດ
+                        <Coins className="w-3.5 h-3.5 shrink-0" />
+                        <span>+{credits} ເຄຣດິດ</span>
                       </button>
                     )}
                     {apiQuota && (
