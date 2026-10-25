@@ -19,8 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import { PLANS, type Plan } from "@/lib/plans";
-import { generateOnePlayQR, checkOnePlayPayment } from "@/lib/jvix";
+import { PLANS, type Plan, planFromAmount } from "@/lib/plans";
+import { createPaymentQR, checkPaymentStatus, parseAmount } from "@/lib/jvix";
 import { generateOnePayDynamicQR } from "@/lib/onepay";
 
 export const Route = createFileRoute("/payment")({
@@ -37,12 +37,38 @@ interface PaymentReq {
   created_at: string;
 }
 
+const CREDITED_STORAGE_KEY = "kb:credited_txs";
+
+function isAlreadyCredited(txId: string): boolean {
+  try {
+    const raw = localStorage.getItem(CREDITED_STORAGE_KEY) || "[]";
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.includes(txId);
+  } catch {
+    return false;
+  }
+}
+
+function markAsCredited(txId: string): void {
+  try {
+    const raw = localStorage.getItem(CREDITED_STORAGE_KEY) || "[]";
+    const arr: string[] = JSON.parse(raw);
+    if (!arr.includes(txId)) {
+      arr.push(txId);
+      localStorage.setItem(CREDITED_STORAGE_KEY, JSON.stringify(arr.slice(-100)));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function PaymentPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [plan, setPlan] = useState<Plan>(PLANS[0]);
   const [loadingQR, setLoadingQR] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [displayAmount, setDisplayAmount] = useState<string>("5,000");
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "pending" | "paid" | "expired">(
@@ -54,6 +80,7 @@ export function PaymentPage() {
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const inFlightRef = useRef(false);
 
   const loadRequests = useCallback(async (uid: string) => {
     const { data } = await supabase
@@ -65,7 +92,6 @@ export function PaymentPage() {
     if (data) setMyRequests(data as PaymentReq[]);
   }, []);
 
-  // Check auth
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) return;
@@ -75,7 +101,6 @@ export function PaymentPage() {
     });
   }, [loadRequests]);
 
-  // Clean up polling & countdown on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
@@ -83,12 +108,13 @@ export function PaymentPage() {
     };
   }, []);
 
-  // Request new QR from Jvix OnePlay
+  // Request QR code from Jvix API
   const requestQR = useCallback(
     async (targetPlan: Plan) => {
       setLoadingQR(true);
       setPaymentStatus("pending");
       setTimeLeft(300);
+      setDisplayAmount(targetPlan.price.toLocaleString());
 
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -97,30 +123,31 @@ export function PaymentPage() {
         const { data: s } = await supabase.auth.getSession();
         const currentUid = s.session?.user.id || userId;
 
-        // 1. Call Jvix OnePlay Generate API
-        const jvixRes = await generateOnePlayQR(targetPlan.price);
+        // POST https://jvix.xyz/api/v1/oneplay/generate
+        const res = await createPaymentQR(targetPlan.price);
 
         let finalQrUrl = "";
         let finalPayload = "";
         let txId = "";
 
-        if (jvixRes.ok && jvixRes.qrUrl && jvixRes.transactionId) {
-          finalQrUrl = jvixRes.qrUrl;
-          finalPayload = jvixRes.payload || "";
-          txId = jvixRes.transactionId;
+        if (res.ok && res.qrUrl && res.transactionId) {
+          finalQrUrl = res.qrUrl;
+          finalPayload = res.payload || "";
+          txId = res.transactionId;
+          if (res.amount) setDisplayAmount(res.amount);
         } else {
-          // Fallback to local dynamic OnePay QR if Jvix API temporarily unreachable
+          // Dynamic fallback if offline
           const fallback = generateOnePayDynamicQR(targetPlan.price);
           finalQrUrl = fallback.qrCodeUrl;
           finalPayload = fallback.raw;
-          txId = `Local-${Date.now().toString(36)}`;
+          txId = `TX-${Date.now().toString(36)}`;
         }
 
         setQrUrl(finalQrUrl);
         setQrPayload(finalPayload);
         setTransactionId(txId);
 
-        // 2. Insert record into payment_requests table in Supabase
+        // Record in payment_requests table
         if (currentUid) {
           const { data: reqData, error: reqErr } = await supabase
             .from("payment_requests")
@@ -140,7 +167,7 @@ export function PaymentPage() {
           }
         }
 
-        // 3. Start countdown timer
+        // Countdown timer
         countdownIntervalRef.current = setInterval(() => {
           setTimeLeft((prev) => {
             if (prev <= 1) {
@@ -153,16 +180,14 @@ export function PaymentPage() {
           });
         }, 1000);
 
-        // 4. Start auto-poll every 2.5s to detect payment
-        if (txId && !txId.startsWith("Local-")) {
+        // Poll check every 3 seconds (as required)
+        if (txId && !txId.startsWith("TX-")) {
           pollIntervalRef.current = setInterval(() => {
             void checkStatus(txId, targetPlan, currentUid);
-          }, 2500);
+          }, 3000);
         }
       } catch (err) {
-        toast.error("ບໍ່ສາມາດສ້າງ QR ໄດ້", {
-          description: err instanceof Error ? err.message : String(err),
-        });
+        toast.error("ບໍ່ສາມາດສ້າງ QR ໄດ້ ກະລຸນາລອງໃໝ່");
       } finally {
         setLoadingQR(false);
       }
@@ -171,42 +196,47 @@ export function PaymentPage() {
     [userId, loadRequests],
   );
 
-  // Initialize QR for default plan on page load
   useEffect(() => {
     void requestQR(plan);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle Plan selection change
   function handleSelectPlan(p: Plan) {
     setPlan(p);
     void requestQR(p);
   }
 
-  // Handle successful auto-cut / auto-approval
+  // Handle successful payment: credit according to amount_base ONCE, guard by transactionId
   const handlePaymentSuccess = useCallback(
-    async (txId: string, currentPlan: Plan, uid?: string | null) => {
+    async (txId: string, amountBaseNum: number, currentPlan: Plan, uid?: string | null) => {
+      // 1. Guard against duplicate credits using transactionId
+      if (isAlreadyCredited(txId)) {
+        return;
+      }
+      markAsCredited(txId);
+
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       setPaymentStatus("paid");
 
       const targetUid = uid || userId;
+      const matchedPlan = planFromAmount(amountBaseNum) || currentPlan;
 
-      // 1. Attempt oneplay_poll RPC if available
+      // 2. Call oneplay_poll RPC if available in database
       try {
         await (
           supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<unknown>
         )("oneplay_poll", { p_transaction_id: txId });
       } catch {
-        // Migration might not have oneplay_poll applied yet
+        // Handled safely
       }
 
-      // 2. If requestId exists, execute auto-approve RPC
+      // 3. Auto-approve payment request in Supabase
       if (requestId) {
         try {
           await supabase.rpc("admin_approve_payment", {
             p_id: requestId,
-            p_note: `OnePlay Auto-Cut: ${txId}`,
+            p_note: `Auto-Verified: ${txId}`,
           });
         } catch {
           // Handled safely
@@ -218,32 +248,40 @@ export function PaymentPage() {
       }
 
       toast.success("ຊຳລະເງິນສຳເລັດແລ້ວ!", {
-        description: `ລະບົບຕັດຍອດ ແລະ ເພີ່ມ ${currentPlan.label} ໃຫ້ຮຽບຮ້ອຍ`,
+        description: `ລະບົບຕັດຍອດ ແລະ ເພີ່ມ ${matchedPlan.label} ໃຫ້ຮຽບຮ້ອຍ`,
       });
     },
     [userId, requestId, loadRequests],
   );
 
-  // Check payment status with Jvix Cloud
+  // Check payment status: POST https://jvix.xyz/api/v1/oneplay/check
+  // status success + paid = จ่ายแล้ว | pending = โพลต่อ
   async function checkStatus(txId: string, currentPlan: Plan, uid?: string | null, manual = false) {
+    if (inFlightRef.current && !manual) return;
+    inFlightRef.current = true;
     if (manual) setChecking(true);
+
     try {
-      const res = await checkOnePlayPayment(txId);
-      if (res.ok && res.status === "paid") {
-        await handlePaymentSuccess(txId, currentPlan, uid);
-      } else if (res.ok && res.status === "expired") {
+      const res = await checkPaymentStatus(txId);
+
+      if (res.paid) {
+        // Credit according to amount_base
+        const baseNum = res.amountBase ? parseAmount(res.amountBase) : currentPlan.price;
+        await handlePaymentSuccess(txId, baseNum || currentPlan.price, currentPlan, uid);
+      } else if (res.status === "expired") {
         setPaymentStatus("expired");
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
         if (manual) toast.error("QR Code ໝົດອາຍຸແລ້ວ ກະລຸນາກົດສ້າງໃໝ່");
       } else if (manual) {
         toast.info("ຍັງບໍ່ພົບຍອດໂອນ", {
-          description: "ຫາກໂອນແລ້ວ ກະລຸນາລໍຖ້າ 2-5 ວິນາທີ ລະບົບຈະກວດສອບອັດຕະໂນມັດ",
+          description: "ຫາກໂອນແລ້ວ ກະລຸນາລໍຖ້າສັກຄູ່ ລະບົບຈະກວດສອບອັດຕະໂນມັດ",
         });
       }
     } catch {
-      if (manual) toast.error("ເກີດຂໍ້ຜິດພາດໃນການກວດສອບ");
+      if (manual) toast.error("ການເຊື່ອມຕໍ່ຂັດຂ້ອງ ກະລຸນາລອງໃໝ່");
     } finally {
+      inFlightRef.current = false;
       if (manual) setChecking(false);
     }
   }
@@ -341,7 +379,7 @@ export function PaymentPage() {
             <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
               2
             </span>
-            ສະແກນ QR ຊຳລະເງິນ {plan.price.toLocaleString()} ກີບ
+            ສະແກນ QR ຊຳລະເງິນ
           </h2>
 
           {paymentStatus === "paid" ? (
@@ -357,11 +395,6 @@ export function PaymentPage() {
                 ລະບົບຕັດຍອດອັດຕະໂນມັດ ແລະ ເພີ່ມ{" "}
                 <span className="text-primary font-bold">{plan.label}</span> ໃຫ້ບັນຊີຂອງທ່ານແລ້ວ
               </p>
-              {transactionId && (
-                <div className="text-xs text-muted-foreground font-mono mt-2 bg-white/60 dark:bg-black/30 py-1 px-3 rounded-full inline-block">
-                  Ref: {transactionId}
-                </div>
-              )}
               <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
                 <Link to="/">
                   <Button
@@ -394,7 +427,7 @@ export function PaymentPage() {
                   <>
                     <img
                       src={qrUrl}
-                      alt="OnePlay QR Code"
+                      alt="Payment QR Code"
                       className="w-64 h-64 object-contain mx-auto"
                     />
                     {paymentStatus === "expired" && (
@@ -424,11 +457,11 @@ export function PaymentPage() {
               {/* Amount & Account Info */}
               <div>
                 <div className="text-2xl sm:text-3xl font-black text-primary">
-                  {plan.price.toLocaleString()} ກີບ
+                  {displayAmount} ກີບ
                 </div>
                 <div className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span>ບັນຊີປາຍທາງ: AKAPHON XAYYABED · OnePay / ທຸກທະນາຄານ</span>
+                  <span>ບັນຊີປາຍທາງ: AKAPHON XAYYABED · ທຸກທະນາຄານ</span>
                 </div>
               </div>
 
@@ -484,7 +517,7 @@ export function PaymentPage() {
 
               {transactionId && (
                 <div className="text-[11px] text-muted-foreground flex items-center justify-center gap-1 pt-1">
-                  <span>Ref: {transactionId}</span>
+                  <span>Ref: {transactionId.slice(-12)}</span>
                   <button
                     onClick={() => {
                       void navigator.clipboard.writeText(transactionId);
@@ -515,7 +548,6 @@ export function PaymentPage() {
                     <div className="text-xs text-muted-foreground">
                       {r.amount.toLocaleString()} ກີບ ·{" "}
                       {new Date(r.created_at).toLocaleDateString()}
-                      {r.admin_note ? ` · “${r.admin_note}”` : ""}
                     </div>
                   </div>
                   <PaymentStatusBadge status={r.status} />
